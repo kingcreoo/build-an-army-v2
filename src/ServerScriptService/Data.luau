@@ -97,6 +97,7 @@ end
 -- Removes player's data from the database
 function Data.Remove(Player: Player)
     local PlayerData = DeepCopy(Database[Player.Name])
+    PlayerData["LogOff"] = os.time()
     print("Removing " .. Player.Name .. ". Their data:")
     print(PlayerData)
     Database[Player.Name] = nil
