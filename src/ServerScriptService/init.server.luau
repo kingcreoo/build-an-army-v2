@@ -1,1 +1,84 @@
 -- // Server, initialized by KingCreoo on 8-19-2025
+-- // Manages basic server functions & connectivity
+
+-- // Services
+local Players = game:GetService("Players")
+local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+-- // Modules
+local Data = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Data"))
+local Plot = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Plot"))
+local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
+
+-- // Variables
+local Anchors = Workspace:WaitForChild("Anchors")
+local OccupiedAnchors = {}
+local PlayerPlotManagers = {}
+
+-- // Functions
+local function InitializeLeaderstats(Player: Player, PlayerData: table)
+    local leaderstats = Instance.new("Folder")
+    leaderstats.Name = "leaderstats"
+    leaderstats.Parent = Player
+
+    for StatName, Value in pairs(PlayerData["leaderstats"]) do
+        local Stat = Instance.new(type(Value))
+        Stat.Name = StatName
+        Stat.Value = Value
+        Stat.Parent = leaderstats
+    end
+end
+
+local function AssignPlotAnchor()
+    local AssignedAnchor
+    for _, Anchor in ipairs(Anchors:GetChildren()) do
+        if not table.find(OccupiedAnchors, Anchor) then
+            AssignedAnchor = Anchor
+            table.insert(OccupiedAnchors, AssignedAnchor)
+
+            return AssignedAnchor
+        end
+    end
+end
+
+local function OnPlayerAdded(Player: Player)
+    -- 1) Load player's data
+    local PlayerData, NewPlayer = Data:GetData(Player)
+    print(Player.Name .. " has joined. Their data:")
+    print(PlayerData)
+    -- 1a) Tutorial for new players
+    if NewPlayer then
+        -- For now, skip lol
+        print(Player.Name .. " is a new player. Skipping tutorial.")
+    end
+
+    -- 2) Create player's plot
+    local PlayerPlot = Plot.new(Player, PlayerData, AssignPlotAnchor())
+    PlayerPlotManagers[Player.Name] = PlayerPlot
+
+    -- 3) Initialize player's leaderstats
+    InitializeLeaderstats(Player, PlayerData)
+
+    -- 4) Teleport player's character to their plot
+    local Character = Player.Character or Player.CharacterAdded:Wait()
+    Character:SetPrimaryPartCFrame(PlayerPlot.Plot.Spawn.CFrame + Vector3.new(0, 3, 0))
+
+    -- 5) TODO Present player's offline earnings
+end
+
+local function OnPlayerRemoving(Player: Player)
+    -- 1) Remove player's data (save & write logoff details too)
+    Data.Remove(Player)
+
+    -- 2) Cleanup player's plot (& set vacant)
+    local PlayerPlot = PlayerPlotManagers[Player.Name]
+    table.remove(OccupiedAnchors, table.find(OccupiedAnchors, PlayerPlot.Anchor))
+    PlayerPlot:Cleanup()
+    PlayerPlotManagers[Player.Name] = nil
+end
+
+-- // Events & Calling
+Players.OnPlayerAdded:Connect(OnPlayerAdded)
+Players.OnPlayerRemoving:Connect(OnPlayerRemoving)
