@@ -12,9 +12,6 @@
     "ReplicatedStorage": {
       "Settings": {
         "$path": "src/ReplicatedStorage"
-      },
-      "TestEZ": {
-        "$path": "src/ReplicatedStorage/TestEZ"
       }
     },
 

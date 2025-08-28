@@ -24,7 +24,7 @@ local function InitializeLeaderstats(Player: Player, PlayerData: table)
     leaderstats.Parent = Player
 
     for StatName, Value in pairs(PlayerData["leaderstats"]) do
-        local Stat = Instance.new(type(Value))
+        local Stat = Instance.new(string.upper(string.sub(type(Value), 1, 1)) .. string.sub(type(Value), 2) .. "Value")
         Stat.Name = StatName
         Stat.Value = Value
         Stat.Parent = leaderstats
@@ -45,7 +45,7 @@ end
 
 local function OnPlayerAdded(Player: Player)
     -- 1) Load player's data
-    local PlayerData, NewPlayer = Data:GetData(Player)
+    local PlayerData, NewPlayer = Data.Initialize(Player)
     print(Player.Name .. " has joined. Their data:")
     print(PlayerData)
     -- 1a) Tutorial for new players
@@ -80,5 +80,5 @@ local function OnPlayerRemoving(Player: Player)
 end
 
 -- // Events & Calling
-Players.OnPlayerAdded:Connect(OnPlayerAdded)
-Players.OnPlayerRemoving:Connect(OnPlayerRemoving)
+Players.PlayerAdded:Connect(OnPlayerAdded)
+Players.PlayerRemoving:Connect(OnPlayerRemoving)
