@@ -8,22 +8,21 @@ SETTINGS.DEFAULT_DATA = {
         ["Credits"] = 100
     },
     ["Plot"] = {
-        ["ActiveSoldiers"] = {
-            ["1"] = "Default",
-            ["2"] = "Default"
-        },
-        ["ActiveTarget"] = "Default",
         ["Unlocks"] = {
-            ["1"] = true,
-            ["2"] = true,
-            ["3"] = false,
-            ["4"] = false,
-            ["5"] = false
+            ["Slot1"] = true,
+            ["Slot2"] = true,
+            ["Slot3"] = false,
+            ["Slot4"] = false,
+            ["Slot5"] = false,
+            ["Slot6"] = false,
+            ["Slot7"] = false
         }
     },
     ["Inventory"] = {
-        ["InactiveSoldiers"] = {},
-        ["InactiveTargets"] = {}
+        ["ActiveSoldiers"] = {},
+        ["SoldierInventory"] = {},
+        ["ActiveTarget"] = "",
+        ["TargetInventory"] = {},
     }
 }
 

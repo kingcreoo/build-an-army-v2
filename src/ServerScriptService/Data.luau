@@ -2,16 +2,16 @@
 -- // Module for managing player data persistence
 
 local Data = {}
+local Players = game:GetService("Players")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
 
 local Settings = require(ReplicatedStorage:WaitForChild("Settings"))
 
-local DataStore = DataStoreService:GetDataStore("DataStore2")
+local DataStore = DataStoreService:GetDataStore("DataStore21212312312")
 
 local Database = {}
-local Saves = {}
 
 -- Deep-clone a table so DEFAULT_DATA isn't mutated
 local function DeepCopy(Table: table)
@@ -34,7 +34,7 @@ function Data.Initialize(Player: Player)
     local NewPlayer
 
     local Success, ErrorMessage = pcall(function()
-        PlayerData = DataStore:GetAsync("Player_" .. Player.UserId)
+        PlayerData = DataStore:GetAsync("Player_" .. Players:GetUserIdFromNameAsync(Player.Name))
     end)
 
     if not Success then
@@ -57,7 +57,7 @@ function Data.Set(Player: Player, PlayerData: table)
 
     local Leaderstats = Player:FindFirstChild("leaderstats")
     if Leaderstats then
-        for Stat, Value in pairs(PlayerData["Stats"]) do
+        for Stat, Value in pairs(PlayerData["leaderstats"]) do
             local StatObject = Leaderstats:FindFirstChild(Stat)
             if StatObject then
                 StatObject.Value = Value
@@ -65,23 +65,8 @@ function Data.Set(Player: Player, PlayerData: table)
         end
     end
 
-    local TimeOfTransaction = os.time()
-    local ToSave
-
-    if not Saves[Player.Name] then
-        ToSave = true
-    else
-        if TimeOfTransaction - Saves[Player.Name] > 60 then
-            ToSave = true
-        end
-    end
-
-    if not ToSave then return end
-
-    Saves[Player.Name] = TimeOfTransaction
-
     local Success, ErrorMessage = pcall(function()
-        DataStore:SetAsync("Player_" .. Player.UserId, PlayerData)
+        DataStore:SetAsync("Player_" .. Players:GetUserIdFromNameAsync(Player.Name), PlayerData)
     end)
 
     if not Success then
@@ -103,7 +88,7 @@ function Data.Remove(Player: Player)
     Database[Player.Name] = nil
 
     local Success, ErrorMessage = pcall(function()
-        DataStore:SetAsync("Player_" .. Player.UserId, PlayerData)
+        DataStore:SetAsync("Player_" .. Players:GetUserIdFromNameAsync(Player.Name), PlayerData)
     end)
 
     if not Success then
