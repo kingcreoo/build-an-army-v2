@@ -40,7 +40,7 @@ function PlotManager:SetSoldier(SlotNumber: string, SoldierID: string)
     local PlayerData = Data.Get(self.Player)
 
     -- 2) Check that player unlocked this slot
-    if PlayerData["Plot"]["Unlocks"]["Slot" .. tostring(SlotNumber)] == false then
+    if PlayerData["Plot"]["Unlocks"][SlotNumber] == false then
         warn("Player does not own slot number! Aborting.")
 
         return
