@@ -2,6 +2,7 @@
 -- // Manages basic server functions & connectivity
 
 -- // Services
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,6 +19,30 @@ local OccupiedAnchors = {}
 local PlayerPlotManagers = {}
 
 -- // Functions
+local function InjectSoldier(Player: Player, Type: string)
+    local PlayerData = Data.Get(Player)
+
+    local SoldierID = HttpService:GenerateGUID()
+    local SoldierData = {["Model"] = Type, ["Type"] = Type}
+
+    PlayerData["Inventory"]["SoldierInventory"][SoldierID] = SoldierData
+    Data.Set(Player, PlayerData)
+
+    PlayerPlotManagers[Player.Name]:SetSoldier("Slot" .. #PlayerData["Inventory"]["ActiveSoldiers"] + 1, SoldierID)
+end
+
+local function InjectTarget(Player: Player, TargetType: string)
+    local PlayerData = Data.Get(Player)
+
+    if not PlayerData["Inventory"]["TargetInventory"]["Default"] then
+        PlayerData["Inventory"]["TargetInventory"]["Default"] = true
+    end
+
+    if PlayerData["Inventory"]["ActiveTarget"] ~= TargetType then
+        PlayerPlotManagers[Player.Name]:SetTarget("Default")
+    end
+end
+
 local function InitializeLeaderstats(Player: Player, PlayerData: table)
     local leaderstats = Instance.new("Folder")
     leaderstats.Name = "leaderstats"
@@ -66,6 +91,12 @@ local function OnPlayerAdded(Player: Player)
     Character:SetPrimaryPartCFrame(PlayerPlot.Plot.Spawn.CFrame + Vector3.new(0, 3, 0))
 
     -- 5) TODO Present player's offline earnings
+
+
+    task.delay(5, function()
+        InjectSoldier(Player, "Default")
+        InjectTarget(Player, "Default")
+    end)
 end
 
 local function OnPlayerRemoving(Player: Player)
