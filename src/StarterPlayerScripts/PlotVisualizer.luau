@@ -18,7 +18,8 @@ local EntityHandlerModule = require(script.Parent.EntityHandler)
 -- // Variables
 local Lanes = {[Players.LocalPlayer.Name] = {}}
 local Soldiers = {[Players.LocalPlayer.Name] = {}}
-local Targets = {}
+local Targets = {[Players.LocalPlayer.Name] = {}}
+local TargetTypes = {}
 
 local SoldierTimers = {}
 
@@ -56,11 +57,15 @@ end
 local function AnimateBullet(PlayerName, SoldierID, TargetSlot)
     -- 1) Get soldier and target models
     local Plot = Workspace:WaitForChild("Plots"):WaitForChild(PlayerName)
+    if not Plot then
+        return 0
+    end
+
     local SoldierModel = Plot.Soldiers[SoldierID]
     local TargetModel = Plot.Targets:FindFirstChild("Target" .. string.sub(TargetSlot, 5))
 
     if not SoldierModel or not TargetModel then
-        return
+        return 0
     end
 
     -- 2) Create bullet from pool
@@ -116,6 +121,57 @@ local function AnimateBullet(PlayerName, SoldierID, TargetSlot)
             EntityHandler:Recycle(Explosion)
         end)
     end)
+
+    return Duration
+end
+
+local function DestroyTarget(InfoTable: table)
+    local PlayerName = InfoTable.PlayerName
+    local SlotName = InfoTable.SoldierData.Slot
+
+    -- 1) Check if target already dead (prevent double-processing)
+    if Targets[PlayerName][SlotName].State ~= "Alive" then
+        return
+    end
+
+    -- 2) Mark target as dead
+    Targets[PlayerName][SlotName].State = "Dead"
+
+    -- 3) Hide target model
+    local Plot = Workspace:WaitForChild("Plots"):WaitForChild(PlayerName)
+    local TargetSlot = string.sub(SlotName, 5)  -- Extract "1" from "Slot1"
+    local TargetModel = Plot.Targets:FindFirstChild("Target" .. TargetSlot)
+    local PartsToRegenerate = {}
+    if TargetModel then
+        for _, Inst in pairs(TargetModel:GetChildren()) do
+            if Inst.ClassName == "Part" and string.sub(Inst.Name, 1, 3) ~= "NHR" then
+                Inst.Transparency = 1
+                table.insert(PartsToRegenerate, Inst)
+            elseif Inst:IsA("Model") then
+                for _, iInst in pairs(Inst:GetChildren()) do
+                    iInst.Transparency = 1
+                    table.insert(PartsToRegenerate, iInst)
+                end
+            end
+        end
+    end
+
+    -- 4) Schedule respawn
+    local RespawnTime = Targets[PlayerName][SlotName]["RespawnTime"]
+    task.delay(RespawnTime, function()
+        -- Reset health and state
+        local CurrentTargetType = TargetTypes[PlayerName]
+        Targets[PlayerName][SlotName].State = "Alive"
+        Targets[PlayerName][SlotName].Health = SETTINGS["TARGET_DATA"][CurrentTargetType]["TotalHealth"]
+    end)
+
+    -- 5) Animate respawn
+    task.delay(.3, function()
+        for _, Part in pairs(PartsToRegenerate) do
+            local RegenerationTween = TweenService:Create(Part, TweenInfo.new(RespawnTime - .3), {["Transparency"] = 0})
+            RegenerationTween:Play()
+        end
+    end)
 end
 
 local function AnimateSoldiers(SoldiersToAnimate: table)
@@ -124,10 +180,20 @@ local function AnimateSoldiers(SoldiersToAnimate: table)
         -- TODO soldier fire animations
 
         -- 2) Create, Calculate, and Animate bullet
-        AnimateBullet(InfoTable.PlayerName, InfoTable.SoldierID, InfoTable.SoldierData.Slot)
+        local TimeToHit = AnimateBullet(InfoTable.PlayerName, InfoTable.SoldierID, InfoTable.SoldierData.Slot)
 
         -- 3) If death, then animate & respawn target
         -- TODO target death animations
+        local Damage = SETTINGS["SOLDIER_DATA"][InfoTable.SoldierData.Type]["Damage"]
+        local CurrentHealth = Targets[InfoTable.PlayerName][InfoTable.SoldierData.Slot]["Health"]
+
+        Targets[InfoTable.PlayerName][InfoTable.SoldierData.Slot].Health = CurrentHealth - Damage
+
+        if CurrentHealth - Damage <= 0 and Targets[InfoTable.PlayerName][InfoTable.SoldierData.Slot].State == "Alive" then
+            task.delay(TimeToHit, function()
+                DestroyTarget(InfoTable)
+            end)
+        end
 
     end
 end
@@ -179,6 +245,7 @@ function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID
     local ExistingSoldierID = Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))]
     if ExistingSoldierID then
         Soldiers[Player.Name][ExistingSoldierID] = nil
+        SoldierTimers[ExistingSoldierID] = nil
         Plot:WaitForChild("Soldiers"):WaitForChild(ExistingSoldierID):Destroy()
     end
     -- TODO create clean animation
@@ -199,7 +266,7 @@ function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetTy
     local TargetModelType = TargetModels:WaitForChild(TargetType)
 
     -- 2) Remove existing targets
-    local ExistingTargetType = Targets[Player.Name]
+    local ExistingTargetType = TargetTypes[Player.Name]
     if ExistingTargetType then
         for _, Target in pairs(Plot:WaitForChild("Targets"):GetChildren()) do
             Target:Destroy()
@@ -208,12 +275,14 @@ function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetTy
     end
 
     -- 3) Set new targets
-    Targets[Player.Name] = TargetType
+    TargetTypes[Player.Name] = TargetType
     for _, SlotName in pairs(UnlockedLanes) do
         local TargetModel = TargetModelType:Clone()
         TargetModel:SetPrimaryPartCFrame(Plot:WaitForChild("TargetSlots"):WaitForChild(SlotName).CFrame * CFrame.Angles(0, math.rad(90), 0) + Vector3.new(0, 2.5, 0))
         TargetModel.Name = "Target" .. string.sub(SlotName, 5)
         TargetModel.Parent = Plot:WaitForChild("Targets")
+
+        Targets[Player.Name][SlotName] = {["Health"] = SETTINGS["TARGET_DATA"][TargetType]["TotalHealth"], ["RespawnTime"] = SETTINGS["TARGET_DATA"][TargetType]["TotalRespawnTime"], ["State"] = "Alive"}
     end
 end
 
@@ -221,11 +290,13 @@ end
 Players.PlayerAdded:Connect(function(Player: Player) 
     Lanes[Player.Name] = {}
     Soldiers[Player.Name] = {}
+    Targets[Player.Name] = {}
 end)
 
 Players.PlayerRemoving:Connect(function(Player: Player)
     Lanes[Player.Name] = nil
     Soldiers[Player.Name] = nil
+    TargetTypes[Player.Name] = nil
     Targets[Player.Name] = nil
 end)
 

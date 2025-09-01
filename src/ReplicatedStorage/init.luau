@@ -40,4 +40,11 @@ SETTINGS.WEAPON_DATA = {
     }
 }
 
+SETTINGS.TARGET_DATA = {
+    ["Default"] = {
+        ["TotalHealth"] = 3,
+        ["TotalRespawnTime"] = 1
+    }
+}
+
 return SETTINGS
