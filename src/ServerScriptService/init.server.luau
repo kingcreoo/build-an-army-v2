@@ -92,11 +92,6 @@ local function OnPlayerAdded(Player: Player)
 
     -- 5) TODO Present player's offline earnings
 
-
-    task.delay(5, function()
-        InjectSoldier(Player, "Default")
-        InjectTarget(Player, "Default")
-    end)
 end
 
 local function OnPlayerRemoving(Player: Player)

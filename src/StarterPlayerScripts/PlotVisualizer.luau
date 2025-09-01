@@ -9,9 +9,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
 
 -- // Modules
 local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
+local EntityHandlerModule = require(script.Parent.EntityHandler)
 
 -- // Variables
 local Lanes = {[Players.LocalPlayer.Name] = {}}
@@ -22,6 +24,8 @@ local SoldierTimers = {}
 
 local SoldierModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Soldiers")
 local TargetModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Targets")
+
+local EntityHandler = EntityHandlerModule.new({"StandardBullet", "StandardExplosion"})
 
 -- // Functions
 
@@ -49,9 +53,82 @@ local function EquipWeapon(SoldierModel: Model, WeaponType: string)
     Track:Play()
 end
 
+local function AnimateBullet(PlayerName, SoldierID, TargetSlot)
+    -- 1) Get soldier and target models
+    local Plot = Workspace:WaitForChild("Plots"):WaitForChild(PlayerName)
+    local SoldierModel = Plot.Soldiers[SoldierID]
+    local TargetModel = Plot.Targets:FindFirstChild("Target" .. string.sub(TargetSlot, 5))
+
+    if not SoldierModel or not TargetModel then
+        return
+    end
+
+    -- 2) Create bullet from pool
+    local Bullet = EntityHandler:Create("StandardBullet")
+
+    -- 3) Position bullet at weapon fire point
+    local FirePoint = SoldierModel.Weapon.Fire
+    Bullet.CFrame = FirePoint.CFrame * CFrame.Angles(0, math.rad(90), 0)
+    Bullet.Parent = Workspace.Bullets
+
+    -- 4) Calculate tween duration (distance / speed)
+    local Distance = (TargetModel.PrimaryPart.Position - FirePoint.Position).Magnitude
+    local BulletSpeed = 50  -- Fixed speed
+    local Duration = Distance / BulletSpeed
+
+    -- 5) Calculate straight trajectory with random spread
+    local TargetPos = TargetModel.PrimaryPart.Position
+    local StraightTargetPos = Vector3.new(TargetPos.X, FirePoint.Position.Y, TargetPos.Z)
+
+    -- Add random spread
+    local Spread = 2  -- studs of random variation
+    local RandomX = (math.random() - 0.5) * Spread
+    local RandomZ = (math.random() - 0.5) * Spread
+    local FinalTargetPos = StraightTargetPos + Vector3.new(RandomX, 0, RandomZ)
+
+    -- 6) Tween to target
+    local Tween = TweenService:Create(
+        Bullet,
+        TweenInfo.new(Duration, Enum.EasingStyle.Linear),
+        {Position = FinalTargetPos}
+    )
+
+    Tween:Play()
+
+    -- 7) Explode & cleanup on completion
+    Tween.Completed:Connect(function()
+        -- Recycle bullet
+        EntityHandler:Recycle(Bullet)
+
+        -- Create explosion effect
+        local Explosion = EntityHandler:Create("StandardExplosion")
+        local Direction = (FinalTargetPos - FirePoint.Position).Unit
+        Explosion.CFrame = CFrame.new(FinalTargetPos - Direction * .75)
+        Explosion.Parent = Workspace.Explosions  -- Need this folder
+
+        -- Configure and trigger explosion particles
+        local ParticleEmitter = Explosion:WaitForChild("ParticleEmitter")
+        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 70, 70))
+        ParticleEmitter:Emit(8)
+
+        -- Cleanup explosion after 1 second
+        task.delay(1, function()
+            EntityHandler:Recycle(Explosion)
+        end)
+    end)
+end
+
 local function AnimateSoldiers(SoldiersToAnimate: table)
     for _, InfoTable in pairs(SoldiersToAnimate) do
-        print("Fire! " .. InfoTable.SoldierID)
+        -- 1) Animate soldier
+        -- TODO soldier fire animations
+
+        -- 2) Create, Calculate, and Animate bullet
+        AnimateBullet(InfoTable.PlayerName, InfoTable.SoldierID, InfoTable.SoldierData.Slot)
+
+        -- 3) If death, then animate & respawn target
+        -- TODO target death animations
+
     end
 end
 
@@ -108,6 +185,7 @@ function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID
 
     -- 3) Set new soldier
     Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))] = SoldierID
+    SoldierData["Slot"] = SlotNumber
     Soldiers[Player.Name][SoldierID] = SoldierData
     SoldierModel.Name = SoldierID
     SoldierModel:SetPrimaryPartCFrame(Plot:WaitForChild("SoldierSlots"):WaitForChild(SlotNumber).CFrame * CFrame.Angles(0, math.rad(-90), 0) + Vector3.new(0,2.5,0))
@@ -134,6 +212,7 @@ function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetTy
     for _, SlotName in pairs(UnlockedLanes) do
         local TargetModel = TargetModelType:Clone()
         TargetModel:SetPrimaryPartCFrame(Plot:WaitForChild("TargetSlots"):WaitForChild(SlotName).CFrame * CFrame.Angles(0, math.rad(90), 0) + Vector3.new(0, 2.5, 0))
+        TargetModel.Name = "Target" .. string.sub(SlotName, 5)
         TargetModel.Parent = Plot:WaitForChild("Targets")
     end
 end

@@ -67,3 +67,5 @@ The human who manages claude has added additional directories to your access:
 **Brain** - Contains the human's thoughts, notes, and project planning. Read-only access for reference purposes. NEVER edit anything in this directory.
 
 - Delete tasks after you are finished using them
+- Always use PascalCase.
+- Remember soldiers always ONLY fire at the target in their lane

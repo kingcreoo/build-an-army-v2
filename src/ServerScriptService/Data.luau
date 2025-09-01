@@ -9,7 +9,7 @@ local DataStoreService = game:GetService("DataStoreService")
 
 local Settings = require(ReplicatedStorage:WaitForChild("Settings"))
 
-local DataStore = DataStoreService:GetDataStore("DataStore21212312312")
+local DataStore = DataStoreService:GetDataStore("DataStore212123123121231")
 
 local Database = {}
 
