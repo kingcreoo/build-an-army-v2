@@ -199,11 +199,26 @@ local function AnimateSoldiers(SoldiersToAnimate: table)
 end
 
 RunService.Heartbeat:Connect(function()
+    -- Early exit if no soldiers exist
+    local HasSoldiers = false
+    for _, PlayerSoldiers in pairs(Soldiers) do
+        if next(PlayerSoldiers) then
+            HasSoldiers = true
+            break
+        end
+    end
+    if not HasSoldiers then return end
+
     local CurrentTime = tick()
     local ReadyToFire = {}
 
     for PlayerName, PlayerSoldiers in pairs(Soldiers) do
         for SoldierID, SoldierData in pairs(PlayerSoldiers) do
+            -- 0) Preliminary checking
+            if not Workspace.Plots[PlayerName].Soldiers:FindFirstChild(SoldierID) then
+                SoldierTimers[SoldierID] = nil
+                continue
+            end
 
             -- 1) Get soldier's base stats
             local BaseFireRate = SETTINGS["SOLDIER_DATA"][SoldierData.Type]["FireRate"]
