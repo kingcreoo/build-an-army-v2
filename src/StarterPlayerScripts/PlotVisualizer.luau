@@ -1,4 +1,3 @@
-local Workspace = game:GetService("Workspace")
 -- // Plot Visualizer, initialized by KingCreoo on 8-28-2025
 -- // Manages animations of soldiers on a player's plot
 
@@ -8,13 +7,18 @@ local PlotVisualizer = {}
 -- // Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 -- // Modules
+local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
 
 -- // Variables
 local Lanes = {[Players.LocalPlayer.Name] = {}}
 local Soldiers = {[Players.LocalPlayer.Name] = {}}
 local Targets = {}
+
+local SoldierTimers = {}
 
 local SoldierModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Soldiers")
 local TargetModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Targets")
@@ -44,6 +48,51 @@ local function EquipWeapon(SoldierModel: Model, WeaponType: string)
     local Track = Animator:LoadAnimation(IdleAnimation)
     Track:Play()
 end
+
+local function AnimateSoldiers(SoldiersToAnimate: table)
+    for _, InfoTable in pairs(SoldiersToAnimate) do
+        print("Fire! " .. InfoTable.SoldierID)
+    end
+end
+
+RunService.Heartbeat:Connect(function()
+    local CurrentTime = tick()
+    local ReadyToFire = {}
+
+    for PlayerName, PlayerSoldiers in pairs(Soldiers) do
+        for SoldierID, SoldierData in pairs(PlayerSoldiers) do
+
+            -- 1) Get soldier's base stats
+            local BaseFireRate = SETTINGS["SOLDIER_DATA"][SoldierData.Type]["FireRate"]
+
+            -- 2) Get any boosts
+            -- TODO get boosts
+            local AbsoluteFireRate = BaseFireRate -- + BOOSTS
+
+            -- 3) Check if this soldier has a timer entry, if not create one
+            if not SoldierTimers[SoldierID] then
+                SoldierTimers[SoldierID] = CurrentTime + AbsoluteFireRate
+            end
+
+            -- 4) Check if ready to fire
+            if CurrentTime >= SoldierTimers[SoldierID] then
+                -- 4a) If yes, then add the soldier to ReadyToFire and prep the next fire time
+                  table.insert(ReadyToFire, {
+                      SoldierID = SoldierID,
+                      PlayerName = PlayerName,
+                      SoldierData = SoldierData
+                  })
+                  SoldierTimers[SoldierID] = CurrentTime + AbsoluteFireRate
+              end
+        end
+    end
+
+    -- Batch animate if any ready
+      if #ReadyToFire > 0 then
+          task.spawn(AnimateSoldiers, ReadyToFire)
+      end
+end)
+
 function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID: string, SoldierData: table)
     -- 1) Define variables
     local Plot = Workspace:WaitForChild("Plots"):WaitForChild(Player.Name)

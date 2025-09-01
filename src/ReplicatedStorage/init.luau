@@ -26,4 +26,18 @@ SETTINGS.DEFAULT_DATA = {
     }
 }
 
+SETTINGS.SOLDIER_DATA = {
+    ["Default"] = {
+        ["FireRate"] = 4,
+        ["Damage"] = 1
+    }
+}
+
+SETTINGS.WEAPON_DATA = {
+    ["M4"] = {
+        ["C0"] = CFrame.new(-0.697, -2.093, 0.167) * CFrame.Angles(math.rad(-90), 0, 0),
+        ["C1"] = CFrame.new(0, -0.062, -0.489)
+    }
+}
+
 return SETTINGS
