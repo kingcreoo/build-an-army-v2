@@ -6,8 +6,10 @@ local Players = game:GetService("Players")
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataStoreService = game:GetService("DataStoreService")
+local ServerScriptService = game:GetService("ServerScriptService")
 
 local Settings = require(ReplicatedStorage:WaitForChild("Settings"))
+local RewardLoop = require(ServerScriptService:WaitForChild("Server"):WaitForChild("RewardLoop"))
 
 local DataStore = DataStoreService:GetDataStore("DataStore212123123121231")
 
@@ -83,6 +85,7 @@ end
 function Data.Remove(Player: Player)
     local PlayerData = DeepCopy(Database[Player.Name])
     PlayerData["LogOff"] = os.time()
+    PlayerData["PendingRewards"] = RewardLoop.GetPendingRewards(Player.Name)
     print("Removing " .. Player.Name .. ". Their data:")
     print(PlayerData)
     Database[Player.Name] = nil
