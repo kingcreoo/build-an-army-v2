@@ -8,9 +8,11 @@ PlotManager.__index = PlotManager
 -- // Services
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
+local Players = game:GetService("Players")
 
 -- // Modules
 local Data = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Data"))
+local RewardLoop = require(ServerScriptService:WaitForChild("Server"):WaitForChild("RewardLoop"))
 
 -- // Variables
 local PlotTemplate = ReplicatedStorage:WaitForChild("PlotTemplate")
@@ -18,6 +20,9 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local SetSoldierEvent: RemoteEvent = Remotes:WaitForChild("SetSoldier")
 local SetTargetEvent: RemoteEvent = Remotes:WaitForChild("SetTarget")
+
+local SetSoldierBindable: BindableEvent = Remotes:WaitForChild("SetSoldierBindable")
+local SetTargetBindable: BindableEvent = Remotes:WaitForChild("SetTargetBindable")
 
 -- // Module functions
 function PlotManager.new(Player: Player, PlayerData: table, PlotAnchor: Part)
@@ -31,6 +36,7 @@ function PlotManager.new(Player: Player, PlayerData: table, PlotAnchor: Part)
 
     self:Populate(PlayerData)
     self:Create(PlotAnchor)
+    RewardLoop.SetupRewards(self.Player)
 
     return self
 end
@@ -57,8 +63,9 @@ function PlotManager:SetSoldier(SlotNumber: string, SoldierID: string)
     self.RLActiveSoldiers[tonumber(string.sub(SlotNumber, 5))] = SoldierID
     Data.Set(self.Player, PlayerData)
 
-    -- 5) Fire all clients to manage animating the soldier
+    -- 5) Fire all clients to manage animating the soldier, and fire server
     SetSoldierEvent:FireAllClients(self.Player, SlotNumber, SoldierID, SoldierData)
+    SetSoldierBindable:Fire(self.Player.Name, SlotNumber, SoldierID, SoldierData)
 end
 
 function PlotManager:SetTarget(TargetType: string)
@@ -88,6 +95,7 @@ function PlotManager:SetTarget(TargetType: string)
 
     -- 5) Fire all clients to manage animating the target
     SetTargetEvent:FireAllClients(self.Player, UnlockedLanes, TargetType)
+    SetTargetBindable:Fire(self.Player.Name, UnlockedLanes, TargetType)
 end
 
 function PlotManager:Populate(PlayerData: table)
@@ -108,6 +116,26 @@ function PlotManager:Populate(PlayerData: table)
         self:SetTarget(PlayerData["Inventory"]["ActiveTarget"])
     end
 
+    -- 5) Check for claiming
+    local Debounce = false
+    self.Plot.Collect.Touched:Connect(function(hit)
+        local Humanoid = hit.Parent:FindFirstChild("Humanoid")
+        if not Humanoid then return end
+
+        local HitPlayer = Players:GetPlayerFromCharacter(hit.Parent)
+
+        -- If the hit player is different than this plot's player, we skip
+        if HitPlayer ~= self.Player then return end
+
+        -- If there's debounce, we skip
+        if Debounce then return end
+
+        Debounce = true
+        RewardLoop.ClaimRewards(self.Player)
+
+        task.wait(1)  -- Cooldown
+        Debounce = false
+    end)
 end
 
 function PlotManager:Create(PlotAnchor: Part)
