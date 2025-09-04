@@ -29,7 +29,8 @@ SETTINGS.DEFAULT_DATA = {
 SETTINGS.SOLDIER_DATA = {
     ["Default"] = {
         ["FireRate"] = 4,
-        ["Damage"] = 1
+        ["Damage"] = 1,
+        ["BulletSpeed"] = 40
     }
 }
 
@@ -43,7 +44,17 @@ SETTINGS.WEAPON_DATA = {
 SETTINGS.TARGET_DATA = {
     ["Default"] = {
         ["TotalHealth"] = 3,
-        ["TotalRespawnTime"] = 1
+        ["TotalRespawnTime"] = 1,
+        ["Reward"] = 3
+    }
+}
+
+SETTINGS.DISTANCES = {
+    ["Worlds"] = {
+        ["Default"] = 55,
+    },
+    ["Tares"] = {
+        ["Default"] = .75
     }
 }
 
