@@ -12,6 +12,7 @@ local Workspace = game:GetService("Workspace")
 local Data = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Data"))
 local Plot = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Plot"))
 local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
+local RewardLoop = require(ServerScriptService:WaitForChild("Server"):WaitForChild("RewardLoop"))
 
 -- // Variables
 local Anchors = Workspace:WaitForChild("Anchors")
@@ -78,6 +79,8 @@ local function OnPlayerAdded(Player: Player)
         -- For now, skip lol
         print(Player.Name .. " is a new player. Skipping tutorial.")
     end
+    -- 1b) Init player in the rewardloop
+    RewardLoop.SetupPlayer(Player, PlayerData)
 
     -- 2) Create player's plot
     local PlayerPlot = Plot.new(Player, PlayerData, AssignPlotAnchor())
@@ -106,5 +109,6 @@ local function OnPlayerRemoving(Player: Player)
 end
 
 -- // Events & Calling
+RewardLoop.Init()
 Players.PlayerAdded:Connect(OnPlayerAdded)
 Players.PlayerRemoving:Connect(OnPlayerRemoving)
