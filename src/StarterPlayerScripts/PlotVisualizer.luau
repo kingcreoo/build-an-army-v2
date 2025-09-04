@@ -28,6 +28,8 @@ local TargetModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Targe
 
 local EntityHandler = EntityHandlerModule.new({"StandardBullet", "StandardExplosion"})
 
+local LocalPlayer = Players.LocalPlayer
+
 -- // Functions
 
 local function EquipWeapon(SoldierModel: Model, WeaponType: string)
@@ -54,7 +56,7 @@ local function EquipWeapon(SoldierModel: Model, WeaponType: string)
     Track:Play()
 end
 
-local function AnimateBullet(PlayerName, SoldierID, TargetSlot)
+local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
     -- 1) Get soldier and target models
     local Plot = Workspace:WaitForChild("Plots"):WaitForChild(PlayerName)
     if not Plot then
@@ -77,13 +79,13 @@ local function AnimateBullet(PlayerName, SoldierID, TargetSlot)
     Bullet.Parent = Workspace.Bullets
 
     -- 4) Calculate tween duration (distance / speed)
-    local Distance = (TargetModel.PrimaryPart.Position - FirePoint.Position).Magnitude
-    local BulletSpeed = 50  -- Fixed speed
+    local Distance = SETTINGS["DISTANCES"]["Worlds"]["Default"]- SETTINGS["DISTANCES"]["Tares"][TargetTypes[PlayerName]]
+    local BulletSpeed = SETTINGS["SOLDIER_DATA"][SoldierData.Type]["BulletSpeed"]
     local Duration = Distance / BulletSpeed
 
     -- 5) Calculate straight trajectory with random spread
-    local TargetPos = TargetModel.PrimaryPart.Position
-    local StraightTargetPos = Vector3.new(TargetPos.X, FirePoint.Position.Y, TargetPos.Z)
+    local Direction = (TargetModel.PrimaryPart.Position - FirePoint.Position).Unit
+    local StraightTargetPos = FirePoint.Position + (Direction * Distance)
 
     -- Add random spread
     local Spread = 2  -- studs of random variation
@@ -108,7 +110,7 @@ local function AnimateBullet(PlayerName, SoldierID, TargetSlot)
         -- Create explosion effect
         local Explosion = EntityHandler:Create("StandardExplosion")
         local Direction = (FinalTargetPos - FirePoint.Position).Unit
-        Explosion.CFrame = CFrame.new(FinalTargetPos - Direction * .75)
+        Explosion.CFrame = CFrame.new(FinalTargetPos - Direction * SETTINGS["DISTANCES"]["Tares"][TargetTypes[PlayerName]])
         Explosion.Parent = Workspace.Explosions  -- Need this folder
 
         -- Configure and trigger explosion particles
@@ -180,7 +182,7 @@ local function AnimateSoldiers(SoldiersToAnimate: table)
         -- TODO soldier fire animations
 
         -- 2) Create, Calculate, and Animate bullet
-        local TimeToHit = AnimateBullet(InfoTable.PlayerName, InfoTable.SoldierID, InfoTable.SoldierData.Slot)
+        local TimeToHit = AnimateBullet(InfoTable.PlayerName, InfoTable.SoldierID, InfoTable.SoldierData, InfoTable.SoldierData.Slot)
 
         -- 3) If death, then animate & respawn target
         -- TODO target death animations
@@ -194,7 +196,6 @@ local function AnimateSoldiers(SoldiersToAnimate: table)
                 DestroyTarget(InfoTable)
             end)
         end
-
     end
 end
 

@@ -48,8 +48,6 @@ local function CalculateTimeToHit(BulletSpeed: number, Tare: number)
 end
 
 local function AddReward(InfoTable: table)
-    print("[SERVER] Rewarding:", tick(), "Player:", InfoTable.PlayerName, "Slot:", InfoTable.SoldierData.Slot)
-
     local PlayerName = InfoTable.PlayerName
     local Slot = InfoTable.SoldierData.Slot
 
