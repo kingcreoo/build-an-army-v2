@@ -76,6 +76,12 @@ end
 
 local function FireSoldiers(SoldiersToFire)
     for _, InfoTable in pairs(SoldiersToFire) do
+        -- Fire local client
+        task.spawn(function()
+            InfoTable.FirePoint = Workspace.Plots:FindFirstChild(InfoTable.PlayerName).Info:FindFirstChild(InfoTable.SoldierData.Slot).CFrame
+            FireSoldierEvent:FireClient(Players:FindFirstChild(InfoTable.PlayerName), InfoTable)
+        end)
+
         -- 1) Get stats
         local Damage = SETTINGS["SOLDIER_DATA"][InfoTable.SoldierData.Type]["Damage"]
         local CurrentHealth = Targets[InfoTable.PlayerName][InfoTable.SoldierData.Slot]["Health"]

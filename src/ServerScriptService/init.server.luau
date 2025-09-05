@@ -94,7 +94,6 @@ local function OnPlayerAdded(Player: Player)
     Character:SetPrimaryPartCFrame(PlayerPlot.Plot.Spawn.CFrame + Vector3.new(0, 3, 0))
 
     -- 5) TODO Present player's offline earnings
-
 end
 
 local function OnPlayerRemoving(Player: Player)

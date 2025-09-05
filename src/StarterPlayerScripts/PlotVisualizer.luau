@@ -30,6 +30,9 @@ local EntityHandler = EntityHandlerModule.new({"StandardBullet", "StandardExplos
 
 local LocalPlayer = Players.LocalPlayer
 
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local FireSoldierEvent: RemoteEvent = Remotes:WaitForChild("FireSoldier")
+
 -- // Functions
 
 local function EquipWeapon(SoldierModel: Model, WeaponType: string)
@@ -56,7 +59,7 @@ local function EquipWeapon(SoldierModel: Model, WeaponType: string)
     Track:Play()
 end
 
-local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
+local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot, FirePoint)
     -- 1) Get soldier and target models
     local Plot = Workspace:WaitForChild("Plots"):WaitForChild(PlayerName)
     if not Plot then
@@ -74,8 +77,10 @@ local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
     local Bullet = EntityHandler:Create("StandardBullet")
 
     -- 3) Position bullet at weapon fire point
-    local FirePoint = SoldierModel.Weapon.Fire
-    Bullet.CFrame = FirePoint.CFrame * CFrame.Angles(0, math.rad(90), 0)
+    if not FirePoint then
+        FirePoint = Plot.Info:FindFirstChild("Slot" .. string.sub(TargetSlot, 5)).CFrame
+    end
+    Bullet.CFrame = FirePoint
     Bullet.Parent = Workspace.Bullets
 
     -- 4) Calculate tween duration (distance / speed)
@@ -182,7 +187,7 @@ local function AnimateSoldiers(SoldiersToAnimate: table)
         -- TODO soldier fire animations
 
         -- 2) Create, Calculate, and Animate bullet
-        local TimeToHit = AnimateBullet(InfoTable.PlayerName, InfoTable.SoldierID, InfoTable.SoldierData, InfoTable.SoldierData.Slot)
+        local TimeToHit = AnimateBullet(InfoTable.PlayerName, InfoTable.SoldierID, InfoTable.SoldierData, InfoTable.SoldierData.Slot, InfoTable.FirePoint)
 
         -- 3) If death, then animate & respawn target
         -- TODO target death animations
@@ -214,6 +219,7 @@ RunService.Heartbeat:Connect(function()
     local ReadyToFire = {}
 
     for PlayerName, PlayerSoldiers in pairs(Soldiers) do
+        if PlayerName == LocalPlayer.Name then continue end
         for SoldierID, SoldierData in pairs(PlayerSoldiers) do
             -- 0) Preliminary checking
             if not Workspace.Plots[PlayerName].Soldiers:FindFirstChild(SoldierID) then
@@ -274,6 +280,7 @@ function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID
     SoldierModel:SetPrimaryPartCFrame(Plot:WaitForChild("SoldierSlots"):WaitForChild(SlotNumber).CFrame * CFrame.Angles(0, math.rad(-90), 0) + Vector3.new(0,2.5,0))
     SoldierModel.Parent = Plot:WaitForChild("Soldiers")
     EquipWeapon(SoldierModel, "M4")
+    SoldierModel:SetAttribute("FirePoint", SoldierModel:FindFirstChild("Weapon"):FindFirstChild("Fire").CFrame)
 end
 
 function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetType: string)
@@ -314,6 +321,15 @@ Players.PlayerRemoving:Connect(function(Player: Player)
     Soldiers[Player.Name] = nil
     TargetTypes[Player.Name] = nil
     Targets[Player.Name] = nil
+end)
+
+FireSoldierEvent.OnClientEvent:Connect(function(InfoTable: table)
+    AnimateSoldiers({{
+          PlayerName = LocalPlayer.Name,
+          SoldierID = InfoTable.SoldierID,
+          SoldierData = InfoTable.SoldierData,
+          FirePoint = InfoTable.FirePoint
+      }})
 end)
 
 -- // Return
