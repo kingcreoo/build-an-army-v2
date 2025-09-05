@@ -21,6 +21,9 @@ local SetTargetBindable: BindableEvent = Remotes:WaitForChild("SetTargetBindable
 local SyncTablesFunction: RemoteFunction = Remotes:WaitForChild("SyncTables")
 local FireSoldierEvent: RemoteEvent = Remotes:WaitForChild("FireSoldier")
 
+local SoldierModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Soldiers")
+local TargetModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Targets")
+
 local Soldiers = {}
 local Targets = {}
 local TargetTypes = {}
@@ -28,6 +31,30 @@ local Timers = {}
 local PendingRewards = {}
 
 -- // Local Functions
+
+local function EquipWeapon(SoldierModel: Model, WeaponType: string)
+    -- 1) Clone and parent weapon
+    local Weapon = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Weapons"):WaitForChild(WeaponType):Clone()
+    Weapon.Parent = SoldierModel
+    Weapon.Name = "Weapon"
+
+    -- 2) Create Motor6D joint to attach weapon to hand
+    local Handle = Weapon:WaitForChild("Handle")
+    local Joint = Instance.new("Motor6D")
+    Joint.Parent = Handle
+    Joint.Part0 = SoldierModel:WaitForChild("Right Arm")
+    Joint.Part1 = Handle
+
+      -- 3) Set weapon offsets from SETTINGS
+    Joint.C0 = SETTINGS["WEAPON_DATA"][WeaponType]["C0"]
+    Joint.C1 = SETTINGS["WEAPON_DATA"][WeaponType]["C1"]
+
+    -- 4) Play idle animation
+    local Animator = SoldierModel:WaitForChild("AnimationController"):WaitForChild("Animator")
+    local IdleAnimation = SoldierModel:WaitForChild("Animations"):WaitForChild(WeaponType .. "Idle")
+    local Track = Animator:LoadAnimation(IdleAnimation)
+    Track:Play()
+end
 
 local function OnPlayerRemoving(Player)
     Soldiers[Player.Name] = nil
@@ -107,6 +134,10 @@ function RewardLoop.GetPendingRewards(PlayerName: string)
 end
 
 function RewardLoop.SetSoldier(PlayerName: string, Slot: string, SoldierID: string, SoldierData: table)
+    -- 0) Define variables
+    local Plot = Workspace.Plots:WaitForChild(PlayerName)
+    local SoldierModel = SoldierModels:WaitForChild(SoldierData["Model"]):Clone()
+
     if not Soldiers[PlayerName] then
         Soldiers[PlayerName] = {}
         Targets[PlayerName] = {}
@@ -119,6 +150,7 @@ function RewardLoop.SetSoldier(PlayerName: string, Slot: string, SoldierID: stri
         if ExistingSoldierData.Slot == Slot then
             Soldiers[PlayerName][ExistingSoldierID] = nil
             Timers[PlayerName][ExistingSoldierID] = nil
+            Plot:WaitForChild("Soldiers"):WaitForChild(ExistingSoldierID):Destroy()
             break
         end
     end
@@ -126,12 +158,25 @@ function RewardLoop.SetSoldier(PlayerName: string, Slot: string, SoldierID: stri
     -- 2) Add new soldier
     SoldierData.Slot = Slot
     Soldiers[PlayerName][SoldierID] = SoldierData
+    SoldierModel.Name = SoldierID
+    SoldierModel:SetPrimaryPartCFrame(Plot:WaitForChild("SoldierSlots"):WaitForChild(Slot).CFrame * CFrame.Angles(0, math.rad(-90), 0) + Vector3.new(0,2.5,0))
+    SoldierModel.Parent = Plot:WaitForChild("Soldiers")
+    EquipWeapon(SoldierModel, "M4")
+    SoldierModel:SetAttribute("FirePoint", SoldierModel:FindFirstChild("Weapon"):FindFirstChild("Fire").CFrame)
 end
 
 function RewardLoop.SetTarget(PlayerName: string, UnlockedLanes: table, TargetType: string)
+    -- 0) Define variables
+    local Plot = Workspace:WaitForChild("Plots"):WaitForChild(PlayerName)
+    local TargetModelType = TargetModels:WaitForChild(TargetType)
+
     -- 1) Clear existing targets, and set new type
     Targets[PlayerName] = {}
     TargetTypes[PlayerName] = TargetType
+    for _, Target in pairs(Plot:WaitForChild("Targets"):GetChildren()) do
+        Target:Destroy()
+        -- TODO create clean animation
+    end
 
     -- 2) Create new targets for each unlocked lane
     for _, SlotName in pairs(UnlockedLanes) do
@@ -140,6 +185,13 @@ function RewardLoop.SetTarget(PlayerName: string, UnlockedLanes: table, TargetTy
             State = "Alive",
             Type = TargetType
         }
+    end
+
+    for _, SlotName in pairs(UnlockedLanes) do
+        local TargetModel = TargetModelType:Clone()
+        TargetModel:SetPrimaryPartCFrame(Plot:WaitForChild("TargetSlots"):WaitForChild(SlotName).CFrame * CFrame.Angles(0, math.rad(90), 0) + Vector3.new(0, 2.5, 0))
+        TargetModel.Name = "Target" .. string.sub(SlotName, 5)
+        TargetModel.Parent = Plot:WaitForChild("Targets")
     end
 end
 
