@@ -21,54 +21,29 @@ local SetTargetBindable: BindableEvent = Remotes:WaitForChild("SetTargetBindable
 local SyncTablesFunction: RemoteFunction = Remotes:WaitForChild("SyncTables")
 local FireSoldierEvent: RemoteEvent = Remotes:WaitForChild("FireSoldier")
 
-local SoldierModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Soldiers")
-local TargetModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Targets")
-
 local Soldiers = {}
 local Targets = {}
 local TargetTypes = {}
 local Timers = {}
 local PendingRewards = {}
+local DueDeaths = {}
 
 -- // Local Functions
-
-local function EquipWeapon(SoldierModel: Model, WeaponType: string)
-    -- 1) Clone and parent weapon
-    local Weapon = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Weapons"):WaitForChild(WeaponType):Clone()
-    Weapon.Parent = SoldierModel
-    Weapon.Name = "Weapon"
-
-    -- 2) Create Motor6D joint to attach weapon to hand
-    local Handle = Weapon:WaitForChild("Handle")
-    local Joint = Instance.new("Motor6D")
-    Joint.Parent = Handle
-    Joint.Part0 = SoldierModel:WaitForChild("Right Arm")
-    Joint.Part1 = Handle
-
-      -- 3) Set weapon offsets from SETTINGS
-    Joint.C0 = SETTINGS["WEAPON_DATA"][WeaponType]["C0"]
-    Joint.C1 = SETTINGS["WEAPON_DATA"][WeaponType]["C1"]
-
-    -- 4) Play idle animation
-    local Animator = SoldierModel:WaitForChild("AnimationController"):WaitForChild("Animator")
-    local IdleAnimation = SoldierModel:WaitForChild("Animations"):WaitForChild(WeaponType .. "Idle")
-    local Track = Animator:LoadAnimation(IdleAnimation)
-    Track:Play()
-end
 
 local function OnPlayerRemoving(Player)
     Soldiers[Player.Name] = nil
     Targets[Player.Name] = nil
     TargetTypes[Player.Name] = nil
     Timers[Player.Name] = nil
+    DueDeaths[Player.Name] = nil
     task.delay(5, function()
         PendingRewards[Player.Name] = nil
     end)
 end
 
-local function CalculateTimeToHit(BulletSpeed: number, Tare: number)
+local function CalculateTimeToHit(Plot: Model, BulletSpeed: number)
     -- TODO calculate boosts, and also set distances for each world
-    local Distance = SETTINGS["DISTANCES"]["Worlds"]["Default"] - Tare
+    local Distance = (Plot.Info.Target1.Position - Plot.Info.Slot1.Position).Magnitude
     local Duration = Distance / BulletSpeed
 
     return Duration
@@ -104,10 +79,7 @@ end
 local function FireSoldiers(SoldiersToFire)
     for _, InfoTable in pairs(SoldiersToFire) do
         -- Fire local client
-        task.spawn(function()
-            InfoTable.FirePoint = Workspace.Plots:FindFirstChild(InfoTable.PlayerName).Info:FindFirstChild(InfoTable.SoldierData.Slot).CFrame
-            FireSoldierEvent:FireClient(Players:FindFirstChild(InfoTable.PlayerName), InfoTable)
-        end)
+        FireSoldierEvent:FireClient(Players:FindFirstChild(InfoTable.PlayerName), InfoTable)
 
         -- 1) Get stats
         local Damage = SETTINGS["SOLDIER_DATA"][InfoTable.SoldierData.Type]["Damage"]
@@ -118,10 +90,14 @@ local function FireSoldiers(SoldiersToFire)
 
         -- 3) If the target died, we give the rewards at the right time
         if CurrentHealth - Damage <= 0 and Targets[InfoTable.PlayerName][InfoTable.SoldierData.Slot].State == "Alive" then
-        local BulletSpeed = SETTINGS["SOLDIER_DATA"][InfoTable.SoldierData.Type]["BulletSpeed"]
-        local TimeToHit = CalculateTimeToHit(BulletSpeed, SETTINGS["DISTANCES"]["Tares"][TargetTypes[InfoTable.PlayerName]])
+            DueDeaths[InfoTable.PlayerName][InfoTable.SoldierData.Slot] = true
+            local BulletSpeed = SETTINGS["SOLDIER_DATA"][InfoTable.SoldierData.Type]["BulletSpeed"]
+            local TimeToHit = CalculateTimeToHit(Workspace.Plots:FindFirstChild(InfoTable.PlayerName), BulletSpeed)
             task.delay(TimeToHit, function()
                 AddReward(InfoTable)
+                task.delay(SETTINGS["TARGET_DATA"][TargetTypes[InfoTable.PlayerName]]["TotalRespawnTime"], function()
+                    DueDeaths[InfoTable.PlayerName][InfoTable.SoldierData.Slot] = false
+                end)
             end)
         end
     end
@@ -134,15 +110,13 @@ function RewardLoop.GetPendingRewards(PlayerName: string)
 end
 
 function RewardLoop.SetSoldier(PlayerName: string, Slot: string, SoldierID: string, SoldierData: table)
-    -- 0) Define variables
-    local Plot = Workspace.Plots:WaitForChild(PlayerName)
-    local SoldierModel = SoldierModels:WaitForChild(SoldierData["Model"]):Clone()
-
+    -- 0) If the player doesn't have tables yet for whatever reason, we set them
     if not Soldiers[PlayerName] then
         Soldiers[PlayerName] = {}
         Targets[PlayerName] = {}
         TargetTypes[PlayerName] = ""
         PendingRewards[PlayerName] = 0
+        DueDeaths[PlayerName] = {}
     end
 
     -- 1) Remove existing soldier in that slot
@@ -150,33 +124,21 @@ function RewardLoop.SetSoldier(PlayerName: string, Slot: string, SoldierID: stri
         if ExistingSoldierData.Slot == Slot then
             Soldiers[PlayerName][ExistingSoldierID] = nil
             Timers[PlayerName][ExistingSoldierID] = nil
-            Plot:WaitForChild("Soldiers"):WaitForChild(ExistingSoldierID):Destroy()
             break
         end
     end
 
     -- 2) Add new soldier
     SoldierData.Slot = Slot
-    Soldiers[PlayerName][SoldierID] = SoldierData
-    SoldierModel.Name = SoldierID
-    SoldierModel:SetPrimaryPartCFrame(Plot:WaitForChild("SoldierSlots"):WaitForChild(Slot).CFrame * CFrame.Angles(0, math.rad(-90), 0) + Vector3.new(0,2.5,0))
-    SoldierModel.Parent = Plot:WaitForChild("Soldiers")
-    EquipWeapon(SoldierModel, "M4")
-    SoldierModel:SetAttribute("FirePoint", SoldierModel:FindFirstChild("Weapon"):FindFirstChild("Fire").CFrame)
+    task.delay(2, function()
+      Soldiers[PlayerName][SoldierID] = SoldierData
+    end)
 end
 
 function RewardLoop.SetTarget(PlayerName: string, UnlockedLanes: table, TargetType: string)
-    -- 0) Define variables
-    local Plot = Workspace:WaitForChild("Plots"):WaitForChild(PlayerName)
-    local TargetModelType = TargetModels:WaitForChild(TargetType)
-
     -- 1) Clear existing targets, and set new type
     Targets[PlayerName] = {}
     TargetTypes[PlayerName] = TargetType
-    for _, Target in pairs(Plot:WaitForChild("Targets"):GetChildren()) do
-        Target:Destroy()
-        -- TODO create clean animation
-    end
 
     -- 2) Create new targets for each unlocked lane
     for _, SlotName in pairs(UnlockedLanes) do
@@ -186,13 +148,6 @@ function RewardLoop.SetTarget(PlayerName: string, UnlockedLanes: table, TargetTy
             Type = TargetType
         }
     end
-
-    for _, SlotName in pairs(UnlockedLanes) do
-        local TargetModel = TargetModelType:Clone()
-        TargetModel:SetPrimaryPartCFrame(Plot:WaitForChild("TargetSlots"):WaitForChild(SlotName).CFrame * CFrame.Angles(0, math.rad(90), 0) + Vector3.new(0, 2.5, 0))
-        TargetModel.Name = "Target" .. string.sub(SlotName, 5)
-        TargetModel.Parent = Plot:WaitForChild("Targets")
-    end
 end
 
 function RewardLoop.SetupPlayer(Player, PlayerData)
@@ -200,7 +155,7 @@ function RewardLoop.SetupPlayer(Player, PlayerData)
     Targets[Player.Name] = {}
     TargetTypes[Player.Name] = ""
     Timers[Player.Name] = {}
-    print(PlayerData)
+    DueDeaths[Player.Name] = {}
     if PlayerData["PendingRewards"] then
         PendingRewards[Player.Name] = PlayerData["PendingRewards"]
     else
@@ -224,6 +179,11 @@ function RewardLoop.Init()
             for SoldierID, SoldierData in pairs(PlayerSoldiers) do
                 -- 0) Check if target is alive
                 if not Targets[PlayerName][SoldierData.Slot] or Targets[PlayerName][SoldierData.Slot].State ~= "Alive" then
+                    continue
+                end
+
+                -- Check if the target is due to die
+                if DueDeaths[PlayerName][SoldierData.Slot] == true then
                     continue
                 end
 
