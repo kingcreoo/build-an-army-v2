@@ -11,7 +11,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local Settings = require(ReplicatedStorage:WaitForChild("Settings"))
 local RewardLoop = require(ServerScriptService:WaitForChild("Server"):WaitForChild("RewardLoop"))
 
-local DataStore = DataStoreService:GetDataStore("DataStore212123123121231")
+local DataStore = DataStoreService:GetDataStore("DataStore123121231231231121231")
 
 local Database = {}
 

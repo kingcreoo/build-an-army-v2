@@ -35,12 +35,12 @@ end
 local function InjectTarget(Player: Player, TargetType: string)
     local PlayerData = Data.Get(Player)
 
-    if not PlayerData["Inventory"]["TargetInventory"]["Default"] then
-        PlayerData["Inventory"]["TargetInventory"]["Default"] = true
+    if not PlayerData["Inventory"]["TargetInventory"][TargetType] then
+        PlayerData["Inventory"]["TargetInventory"][TargetType] = true
     end
 
     if PlayerData["Inventory"]["ActiveTarget"] ~= TargetType then
-        PlayerPlotManagers[Player.Name]:SetTarget("Default")
+        PlayerPlotManagers[Player.Name]:SetTarget(TargetType)
     end
 end
 

@@ -93,7 +93,7 @@ local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
     Bullet.Parent = Workspace.Bullets
 
     -- 4) Calculate tween duration (distance / speed)
-    local TargetPosition = TargetModel.PrimaryPart.Position
+    local TargetPosition = TargetModel.Target.Position
     local Distance = (Plot.Info.Target1.Position - Plot.Info.Slot1.Position).Magnitude
     local BulletSpeed = SETTINGS["SOLDIER_DATA"][SoldierData.Type]["BulletSpeed"]
     local Duration = Distance / BulletSpeed
@@ -133,8 +133,8 @@ local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
         -- Create explosion effect
         local Explosion = EntityHandler:Create("StandardExplosion")
         local Direction = (FinalTargetPosition - FirePoint.Position).Unit
-        Explosion.CFrame = CFrame.new(FinalTargetPosition - Direction * SETTINGS["DISTANCES"]["Tares"][TargetTypes[PlayerName]])
-        Explosion.Parent = Workspace.Explosions  -- Need this folder
+        Explosion.CFrame = CFrame.new(FinalTargetPosition - Direction)
+        Explosion.Parent = Workspace.Explosions
 
         -- Configure and trigger explosion particles
         local ParticleEmitter = Explosion:WaitForChild("ParticleEmitter")
@@ -169,7 +169,7 @@ local function DestroyTarget(InfoTable: table)
     local PartsToRegenerate = {}
     if TargetModel then
         for _, Inst in pairs(TargetModel:GetChildren()) do
-            if Inst.ClassName == "Part" and string.sub(Inst.Name, 1, 3) ~= "NHR" then
+            if Inst.ClassName == "Part" and Inst.Name ~= "Anchor" and Inst.Name ~= "Target" then
                 Inst.Transparency = 1
                 table.insert(PartsToRegenerate, Inst)
             elseif Inst:IsA("Model") then

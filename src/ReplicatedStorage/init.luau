@@ -43,19 +43,26 @@ SETTINGS.WEAPON_DATA = {
 }
 
 SETTINGS.TARGET_DATA = {
-    ["Default"] = {
+    ["Target1"] = {
         ["TotalHealth"] = 3,
-        ["TotalRespawnTime"] = 1,
+        ["TotalRespawnTime"] = 2,
         ["Reward"] = 3
+    },
+    ["Target2"] = {
+        ["TotalHealth"] = 5,
+        ["TotalRespawnTime"] = 1.8,
+        ["Reward"] = 10
+    },
+    ["Target3"] = {
+        ["TotalHealth"] = 10,
+        ["TotalRespawnTime"] = 1.7,
+        ["Reward"] = 25
     }
 }
 
 SETTINGS.DISTANCES = {
     ["Worlds"] = {
         ["Default"] = 55,
-    },
-    ["Tares"] = {
-        ["Default"] = .75
     }
 }
 
