@@ -128,7 +128,6 @@ local function CloseFrame(Frame, NextFrame)
 end
 
 local function OpenFrame(Frame: Frame)
-    Frame:SetAttribute("Opening", true)
 
     if ActiveFrame and ActiveFramePriority then
         return
@@ -146,9 +145,6 @@ local function OpenFrame(Frame: Frame)
     Frame.Size = UDim2.fromScale(0,0)
     Frame.Visible = true
     OpenTween:Play()
-    OpenTween.Completed:Connect(function()
-        Frame:SetAttribute("Opening", false)
-    end)
 end
 
 -- // Events
@@ -195,7 +191,7 @@ SoldierShopPrompt.PromptShown:Connect(function()
     PromptedFrameDebounces[SoldierShopFrame] = false
 end)
 SoldierShopPrompt.PromptHidden:Connect(function()
-    --if SoldierShopFrame.Visible == false and SoldierShopFrame:GetAttribute("Opening") then return end
+    if SoldierShopFrame.Visible == false then return end
     CloseFrame(SoldierShopFrame)
 end)
 
