@@ -16,7 +16,13 @@ local FramesGui = LocalGui:WaitForChild("Frames")
 local SoldierShopFrame: Frame = FramesGui:WaitForChild("SoldierShop")
 local CloseButton: TextButton = SoldierShopFrame:WaitForChild("Close")
 
-local Buttons = {CloseButton}
+local StandardFrame: Frame = SoldierShopFrame:WaitForChild("Standard")
+local PremiumFrame: Frame = SoldierShopFrame:WaitForChild("Premium")
+
+local Status: Frame = StandardFrame:WaitForChild("Status")
+local RefreshButton: TextButton = Status:WaitForChild("Refresh")
+
+local Buttons = {CloseButton, RefreshButton}
 
 local ButtonExpandBindable: BindableEvent = UI:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = UI:WaitForChild("ButtonDeflate")
