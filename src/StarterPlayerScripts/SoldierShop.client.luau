@@ -38,6 +38,38 @@ local FrameActive = false
 
 -- // Functions
 
+local function EnterUtilityMode(SoldierFrame: Frame, MainFrame: Frame, UtilityFrame: Frame, UtilityButton)
+    local SoldierFrameTween = TweenService:Create(SoldierFrame, UtilityInfo, {Size = SoldierFrame:GetAttribute("UtilitySize")})
+    SoldierFrameTween:Play()
+
+    local MainFrameTween = TweenService:Create(MainFrame, UtilityInfo, {Size = MainFrame:GetAttribute("UtilitySize")})
+    MainFrameTween:Play()
+
+    local UtilityButtonTween = TweenService:Create(UtilityButton, UtilityInfo, {Size = UtilityButton:GetAttribute("UtilitySize")})
+    UtilityButtonTween:Play()
+
+    local UtilityFrameTween = TweenService:Create(UtilityFrame, UtilityInfo, {Position = UtilityFrame:GetAttribute("UtilityPosition")})
+    UtilityFrameTween:Play()
+
+    task.wait(.1)
+end
+
+local function ExitUtilityMode(SoldierFrame: Frame, MainFrame: Frame, UtilityFrame: Frame, UtilityButton)
+    local SoldierFrameTween = TweenService:Create(SoldierFrame, UtilityInfo, {Size = SoldierFrame:GetAttribute("StandardSize")})
+    SoldierFrameTween:Play()
+
+    local MainFrameTween = TweenService:Create(MainFrame, UtilityInfo, {Size = MainFrame:GetAttribute("StandardSize")})
+    MainFrameTween:Play()
+
+    local UtilityButtonTween = TweenService:Create(UtilityButton, UtilityInfo, {Size = UtilityButton:GetAttribute("StandardSize")})
+    UtilityButtonTween:Play()
+
+    local UtilityFrameTween = TweenService:Create(UtilityFrame, UtilityInfo, {Position = UtilityFrame:GetAttribute("StandardPosition")})
+    UtilityFrameTween:Play()
+
+    task.wait(.1)
+end
+
 local function InitializeStandardShop()
     for Num, Type in pairs(SETTINGS.SHOP_ORDER) do
         local Data = SETTINGS.SOLDIER_DATA[Type]
@@ -48,8 +80,39 @@ local function InitializeStandardShop()
         MainFrame:WaitForChild("Label").Text = string.upper(Type)
         MainFrame:WaitForChild("Price").Text = "$" .. Data["Price"]
 
+        local UtilityFrame = SoldierFrame:WaitForChild("UtilityFrame")
+        local CreditsButton: TextButton = UtilityFrame:WaitForChild("Credits")
+        local RobuxButton: TextButton = UtilityFrame:WaitForChild("Robux")
+        local GiftButton: TextButton = UtilityFrame:WaitForChild("Gift")
+        local UtilityButtons = {CreditsButton, RobuxButton, GiftButton}
+        CreditsButton.TextLabel.Text = "$" .. Data["Price"]
+        RobuxButton.TextLabel.Text = "$" .. Data["RobuxPrice"]
 
         SoldierFrame.Parent = StandardFrame:WaitForChild("ScrollingFrame")
+
+        local Debounce = false
+        local Mode = 0
+        local UtilityButton = SoldierFrame:WaitForChild("UtilityButton")
+        UtilityButton.MouseButton1Click:Connect(function()
+            if Debounce then return end
+            Debounce = true
+
+            if Mode == 0 then
+                EnterUtilityMode(SoldierFrame, MainFrame, UtilityFrame, UtilityButton)
+                Mode = 1
+            elseif Mode == 1 then
+                ExitUtilityMode(SoldierFrame, MainFrame, UtilityFrame, UtilityButton)
+                Mode = 0
+            end
+
+            task.wait(.1)
+            Debounce = false
+        end)
+
+        table.insert(Buttons, CreditsButton)
+        table.insert(Buttons, RobuxButton)
+        table.insert(Buttons, GiftButton)
+    end
 
     TemplateFrame:Destroy()
 end
