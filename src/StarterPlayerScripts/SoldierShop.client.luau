@@ -10,6 +10,14 @@ local TweenService = game:GetService("TweenService")
 local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
 
 -- // Variables
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local GetStockFunction: RemoteFunction = Remotes:WaitForChild("GetStock")
+local RestockEvent: RemoteEvent = Remotes:WaitForChild("Restock")
+
+local CurrentStock
+local TimeOfStock
+local RecentPurchase = {}
+
 local UtilityInfo = TweenInfo.new(.065, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
 local LocalPlayer = Players.LocalPlayer
@@ -25,6 +33,7 @@ local StandardFrame: Frame = SoldierShopFrame:WaitForChild("Standard")
 local PremiumFrame: Frame = SoldierShopFrame:WaitForChild("Premium")
 
 local Status: Frame = StandardFrame:WaitForChild("Status")
+local Timer: TextLabel = Status:WaitForChild("Timer")
 local RefreshButton: TextButton = Status:WaitForChild("Refresh")
 local TemplateFrame: Frame = StandardFrame:WaitForChild("ScrollingFrame"):WaitForChild("Template")
 
@@ -37,6 +46,22 @@ local CloseFrameBindable: BindableEvent = UI:WaitForChild("CloseFrame")
 local FrameActive = false
 
 -- // Functions
+
+local function UpdateTimer()
+    while true do
+        local TimeRemaining = 180 - (os.time() - TimeOfStock)
+        if TimeRemaining < 0 then
+            TimeRemaining = 0
+        end
+
+        local Minutes = math.floor(TimeRemaining / 60)
+        local Seconds = TimeRemaining % 60
+
+        Timer.Text = "Stock resets in " .. string.format("%d:%02d", Minutes, Seconds)
+
+        task.wait(1)
+    end
+end
 
 local function EnterUtilityMode(SoldierFrame: Frame, MainFrame: Frame, UtilityFrame: Frame, UtilityButton)
     local SoldierFrameTween = TweenService:Create(SoldierFrame, UtilityInfo, {Size = SoldierFrame:GetAttribute("UtilitySize")})
@@ -70,7 +95,47 @@ local function ExitUtilityMode(SoldierFrame: Frame, MainFrame: Frame, UtilityFra
     task.wait(.1)
 end
 
+local function StockStandardShop()
+    for _, SoldierFrame: Frame in pairs(StandardFrame:WaitForChild("ScrollingFrame"):GetChildren()) do
+        if SoldierFrame.Name == "UIListLayout" then continue end
+
+        local Stock: TextLabel = SoldierFrame:WaitForChild("MainFrame"):WaitForChild("Stock")
+        local CreditsButton: TextButton = SoldierFrame:WaitForChild("UtilityFrame"):WaitForChild("Credits")
+
+        local Type = string.gsub(SoldierFrame.Name, "^%d+", "")
+        local StockedSoldiers = CurrentStock[Type] or 0
+
+        if StockedSoldiers == 0 then
+            Stock.Text = "0x Stock"
+            Stock.TextColor3 = Color3.fromRGB(255, 0, 0)
+
+            CreditsButton.TextLabel.Text = "NO STOCK"
+            CreditsButton.TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+            CreditsButton.TextLabel.UIStroke.Color = Color3.fromRGB(0, 0, 0)
+
+            CreditsButton.BackgroundColor3 = Color3.fromRGB(98, 98, 98)
+            CreditsButton.UIStroke.Color = Color3.fromRGB(61, 61, 61)
+        else
+            Stock.Text = StockedSoldiers .. "x Stock"
+            Stock.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+            CreditsButton.TextLabel.Text = "$" .. SETTINGS.SOLDIER_DATA[Type]["Price"]
+            CreditsButton.TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+            CreditsButton.TextLabel.UIStroke.Color = CreditsButton.UIStroke:GetAttribute("InStockColor")
+
+            CreditsButton.BackgroundColor3 = CreditsButton:GetAttribute("InStockColor")
+            CreditsButton.UIStroke.Color = CreditsButton.UIStroke:GetAttribute("InStockColor")
+        end
+    end
+end
+
 local function InitializeStandardShop()
+    local ServerCurrentStock, ServerTimeOfStock = GetStockFunction:InvokeServer()
+    CurrentStock = ServerCurrentStock
+    TimeOfStock = ServerTimeOfStock
+
+    task.spawn(UpdateTimer)
+
     for Num, Type in pairs(SETTINGS.SHOP_ORDER) do
         local Data = SETTINGS.SOLDIER_DATA[Type]
         local SoldierFrame = TemplateFrame:Clone()
@@ -86,7 +151,7 @@ local function InitializeStandardShop()
         local GiftButton: TextButton = UtilityFrame:WaitForChild("Gift")
         local UtilityButtons = {CreditsButton, RobuxButton, GiftButton}
         CreditsButton.TextLabel.Text = "$" .. Data["Price"]
-        RobuxButton.TextLabel.Text = "$" .. Data["RobuxPrice"]
+        RobuxButton.TextLabel.Text = "R$" .. Data["RobuxPrice"]
 
         SoldierFrame.Parent = StandardFrame:WaitForChild("ScrollingFrame")
 
@@ -127,7 +192,17 @@ SoldierShopFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     FrameActive = SoldierShopFrame.Visible
 end)
 
+RestockEvent.OnClientEvent:Connect(function(NewStock, TimeOfNewStock)
+    CurrentStock = NewStock
+    TimeOfStock = TimeOfNewStock
+    RecentPurchase = {}
+
+    StockStandardShop()
+end)
+
 InitializeStandardShop()
+StockStandardShop()
+
 for _, Button in pairs(Buttons) do
     Button.MouseEnter:Connect(function()
         if FrameActive == false then return end
