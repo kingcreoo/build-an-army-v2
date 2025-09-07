@@ -18,8 +18,31 @@ local RewardLoop = require(ServerScriptService:WaitForChild("Server"):WaitForChi
 local Anchors = Workspace:WaitForChild("Anchors")
 local OccupiedAnchors = {}
 local PlayerPlotManagers = {}
+local CurrentStock
+local TimeOfStock
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local RestockEvent: RemoteEvent = Remotes:WaitForChild("Restock")
+local GetStockFunction: RemoteFunction = Remotes:WaitForChild("GetStock")
 
 -- // Functions
+local function RNGStock(Rarity)
+    if math.random() <= Rarity then
+        return math.random(1, 10)
+    else
+        return 0
+    end
+end
+
+local function Restock()
+    local Stocks = {}
+    for _, Type in ipairs(SETTINGS.SHOP_ORDER) do
+        Stocks[Type] = RNGStock(SETTINGS.SOLDIER_DATA[Type]["Rarity"])
+    end
+
+    return Stocks
+end
+
 local function InjectSoldier(Player: Player, Type: string)
     local PlayerData = Data.Get(Player)
 
@@ -111,3 +134,18 @@ end
 RewardLoop.Init()
 Players.PlayerAdded:Connect(OnPlayerAdded)
 Players.PlayerRemoving:Connect(OnPlayerRemoving)
+
+task.spawn(function()
+    while true do
+        CurrentStock = Restock()
+        TimeOfStock = os.time()
+
+        RestockEvent:FireAllClients(CurrentStock, TimeOfStock)
+
+        task.wait(180)
+    end
+end)
+
+GetStockFunction.OnServerInvoke = function()
+    return CurrentStock, TimeOfStock
+end
