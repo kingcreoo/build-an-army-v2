@@ -27,12 +27,30 @@ SETTINGS.DEFAULT_DATA = {
 }
 
 SETTINGS.SOLDIER_DATA = {
-    ["Default"] = {
+    ["The Grunt"] = {
         ["FireRate"] = 4,
         ["Damage"] = 1,
-        ["BulletSpeed"] = 40
+        ["BulletSpeed"] = 40,
+        ["Price"] = 10,
+        ["RobuxPrice"] = 3
+    },
+    ["The Shotgunner"] = {
+        ["FireRate"] = 4,
+        ["Damage"] = 1,
+        ["BulletSpeed"] = 40,
+        ["Price"] = 25,
+        ["RobuxPrice"] = 5
+    },
+    ["The Heavy"] = {
+        ["FireRate"] = 4,
+        ["Damage"] = 1,
+        ["BulletSpeed"] = 40,
+        ["Price"] = 60,
+        ["RobuxPrice"] = 10
     }
 }
+
+SETTINGS.SHOP_ORDER = {"The Grunt", "The Shotgunner", "The Heavy"}
 
 SETTINGS.WEAPON_DATA = {
     ["M4"] = {
