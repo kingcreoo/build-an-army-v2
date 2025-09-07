@@ -20,10 +20,12 @@ local OccupiedAnchors = {}
 local PlayerPlotManagers = {}
 local CurrentStock
 local TimeOfStock
+local RecentPurchases = {}
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local RestockEvent: RemoteEvent = Remotes:WaitForChild("Restock")
 local GetStockFunction: RemoteFunction = Remotes:WaitForChild("GetStock")
+local PurchaseSoldierFunction: RemoteFunction = Remotes:WaitForChild("PurchaseSoldier")
 
 -- // Functions
 local function RNGStock(Rarity)
@@ -40,7 +42,16 @@ local function Restock()
         Stocks[Type] = RNGStock(SETTINGS.SOLDIER_DATA[Type]["Rarity"])
     end
 
+    RecentPurchases = {}
+
     return Stocks
+end
+
+local function CreateSoldier(Type: string)
+    local SoldierID = HttpService:GenerateGUID()
+    local SoldierData = {["Model"] = Type, ["Type"] = Type}
+
+    return SoldierID, SoldierData
 end
 
 local function InjectSoldier(Player: Player, Type: string)
@@ -65,6 +76,39 @@ local function InjectTarget(Player: Player, TargetType: string)
     if PlayerData["Inventory"]["ActiveTarget"] ~= TargetType then
         PlayerPlotManagers[Player.Name]:SetTarget(TargetType)
     end
+end
+
+local function PurchaseSoldier(Player: Player, Type: string)
+    -- 1) Check if the soldier is in stock for this player
+    if CurrentStock[Type] <= 0 then return "Stock" end
+
+    if not RecentPurchases[Player.Name] then
+        RecentPurchases[Player.Name] = {}
+    elseif RecentPurchases[Player.Name][Type] and CurrentStock[Type] - RecentPurchases[Player.Name][Type] <= 0 then
+        return "Stock"
+    end
+
+    -- 2) Check if player has sufficient funds
+    local PlayerData = Data.Get(Player)
+    if PlayerData["leaderstats"]["Credits"] <= SETTINGS["SOLDIER_DATA"][Type]["Price"] then
+        return "Insufficient"
+    end
+
+    -- 3) Subtract player funds & stock
+    PlayerData["leaderstats"]["Credits"] -= SETTINGS["SOLDIER_DATA"][Type]["Price"]
+
+    if not RecentPurchases[Player.Name][Type] then
+        RecentPurchases[Player.Name][Type] = 1
+    else
+        RecentPurchases[Player.Name][Type] += 1
+    end
+
+    -- 4) Add soldier to player's inventory
+    local SoldierID, SoldierData = CreateSoldier(Type)
+    PlayerData["Inventory"]["SoldierInventory"][SoldierID] = SoldierData
+    Data.Set(Player, PlayerData)
+
+    return "Purchased", PlayerData
 end
 
 local function InitializeLeaderstats(Player: Player, PlayerData: table)
@@ -148,4 +192,10 @@ end)
 
 GetStockFunction.OnServerInvoke = function()
     return CurrentStock, TimeOfStock
+end
+
+PurchaseSoldierFunction.OnServerInvoke = function(Player: Player, Type: string)
+    local Arg1, Arg2 = PurchaseSoldier(Player, Type)
+
+    return Arg1, Arg2
 end

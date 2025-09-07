@@ -13,10 +13,11 @@ local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local GetStockFunction: RemoteFunction = Remotes:WaitForChild("GetStock")
 local RestockEvent: RemoteEvent = Remotes:WaitForChild("Restock")
+local PurchaseSoldierFunction: RemoteFunction = Remotes:WaitForChild("PurchaseSoldier")
+local UpdateInventoryBindable: BindableEvent = Remotes:WaitForChild("UpdateInventory")
 
 local CurrentStock
 local TimeOfStock
-local RecentPurchase = {}
 
 local UtilityInfo = TweenInfo.new(.065, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
@@ -46,6 +47,60 @@ local CloseFrameBindable: BindableEvent = UI:WaitForChild("CloseFrame")
 local FrameActive = false
 
 -- // Functions
+
+local CDB = false
+local function PressCreditsButton(SoldierFrame: Frame, Type: string)
+    -- 1) Check debounce
+    if CDB then return end
+    CDB = true
+
+    -- 2) Check if in stock (considering recent purchases)
+    if CurrentStock[Type] <= 0 then return end
+
+    -- 3) Check if has cash
+    if LocalPlayer:WaitForChild("leaderstats"):WaitForChild("Credits").Value < SETTINGS.SOLDIER_DATA[Type]["Price"] then 
+        -- TODO Notify player of insufficient funds
+        return
+    end
+
+    -- 4) Invoke server, and await response
+    local Response, PlayerData = PurchaseSoldierFunction:InvokeServer(Type)
+
+    -- 5) Act on various response types
+    if Response == "Purchased" then
+        -- 1) Update stock
+        CurrentStock[Type] -= 1
+        if CurrentStock[Type] <= 0 then
+            local Stock: TextLabel = SoldierFrame:WaitForChild("MainFrame"):WaitForChild("Stock")
+            local CreditsButton: TextButton = SoldierFrame:WaitForChild("UtilityFrame"):WaitForChild("Credits")
+
+            Stock.Text = "0x Stock"
+            Stock.TextColor3 = Color3.fromRGB(255, 0, 0)
+
+            CreditsButton.TextLabel.Text = "NO STOCK"
+            CreditsButton.TextLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+            CreditsButton.TextLabel.UIStroke.Color = Color3.fromRGB(0, 0, 0)
+
+            CreditsButton.BackgroundColor3 = Color3.fromRGB(98, 98, 98)
+            CreditsButton.UIStroke.Color = Color3.fromRGB(61, 61, 61)
+        else
+            local Stock: TextLabel = SoldierFrame:WaitForChild("MainFrame"):WaitForChild("Stock")
+            Stock.Text = CurrentStock[Type] .. "x Stock"
+        end
+
+        -- 2) Update inventory
+        UpdateInventoryBindable:Fire(PlayerData)
+
+        -- 3) TODO animation (?)
+
+    elseif Response == "Stock" or Response == "Insufficient" then
+        -- TODO notify player that something has gone wrong, ensure funds have not been spent
+        warn(Response)
+    end
+
+    task.wait(.075)
+    CDB = false
+end
 
 local function UpdateTimer()
     while true do
@@ -105,7 +160,7 @@ local function StockStandardShop()
         local Type = string.gsub(SoldierFrame.Name, "^%d+", "")
         local StockedSoldiers = CurrentStock[Type] or 0
 
-        if StockedSoldiers == 0 then
+        if StockedSoldiers <= 0 then
             Stock.Text = "0x Stock"
             Stock.TextColor3 = Color3.fromRGB(255, 0, 0)
 
@@ -174,6 +229,10 @@ local function InitializeStandardShop()
             Debounce = false
         end)
 
+        CreditsButton.MouseButton1Click:Connect(function()
+            PressCreditsButton(SoldierFrame, Type)
+        end)
+
         table.insert(Buttons, CreditsButton)
         table.insert(Buttons, RobuxButton)
         table.insert(Buttons, GiftButton)
@@ -195,7 +254,6 @@ end)
 RestockEvent.OnClientEvent:Connect(function(NewStock, TimeOfNewStock)
     CurrentStock = NewStock
     TimeOfStock = TimeOfNewStock
-    RecentPurchase = {}
 
     StockStandardShop()
 end)
