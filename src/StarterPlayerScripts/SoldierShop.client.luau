@@ -20,6 +20,8 @@ local CurrentStock
 local TimeOfStock
 
 local UtilityInfo = TweenInfo.new(.065, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+local LogInfo = TweenInfo.new(.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+local LogExitInfo = TweenInfo.new(.7, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
 local LocalPlayer = Players.LocalPlayer
 local UI = LocalPlayer:WaitForChild("PlayerScripts"):WaitForChild("Client"):WaitForChild("UI")
@@ -31,7 +33,6 @@ local SoldierShopFrame: Frame = FramesGui:WaitForChild("SoldierShop")
 local CloseButton: TextButton = SoldierShopFrame:WaitForChild("Close")
 
 local StandardFrame: Frame = SoldierShopFrame:WaitForChild("Standard")
-local PremiumFrame: Frame = SoldierShopFrame:WaitForChild("Premium")
 
 local Status: Frame = StandardFrame:WaitForChild("Status")
 local Timer: TextLabel = Status:WaitForChild("Timer")
@@ -47,6 +48,26 @@ local CloseFrameBindable: BindableEvent = UI:WaitForChild("CloseFrame")
 local FrameActive = false
 
 -- // Functions
+
+local function GetNextLogName(logParent: Frame)
+    local LowestNumber = 99  -- Start with the highest number we want
+
+    -- Find the current lowest number in existing log names
+    for _, child in ipairs(logParent:GetChildren()) do
+        if child:IsA("Frame") and child.Name ~= "Template" then
+            local numberPart = string.match(child.Name, "^(%d+)")
+            if numberPart then
+                local number = tonumber(numberPart)
+                if number and number < LowestNumber then
+                    LowestNumber = number
+                end
+            end
+        end
+    end
+
+    -- Return the next number (one less than the current lowest)
+    return tostring(LowestNumber - 1) .. "Log"
+end
 
 local CDB = false
 local function PressCreditsButton(SoldierFrame: Frame, Type: string)
@@ -91,7 +112,43 @@ local function PressCreditsButton(SoldierFrame: Frame, Type: string)
         -- 2) Update inventory
         UpdateInventoryBindable:Fire(PlayerData)
 
-        -- 3) TODO animation (?)
+        -- 3) Animate
+        local Log = SoldierFrame.Parent.Parent.Parent:WaitForChild("Log")
+        local LogFrame: Frame = Log:WaitForChild("Template"):Clone()
+
+        LogFrame.ViewTile.Image.Image = SETTINGS.SOLDIER_DATA[Type]["Image"]
+        LogFrame.Parent = Log
+        LogFrame.Size = UDim2.fromScale(0,0)
+        LogFrame.Name = GetNextLogName(Log)
+        LogFrame.Visible = true
+
+        local LogFrameTween = TweenService:Create(LogFrame, LogInfo, {Size = LogFrame:GetAttribute("StandardSize")})
+        LogFrameTween:Play()
+
+        LogFrameTween.Completed:Connect(function()
+            task.wait(3)
+
+            local ItemsToFadeOut = {LogFrame:WaitForChild("ViewTile"), LogFrame:WaitForChild("ViewTile"):WaitForChild("Image"), LogFrame:WaitForChild("ViewTile"):WaitForChild("UIStroke"), LogFrame:WaitForChild("TextLabel"), LogFrame:WaitForChild("TextLabel"):WaitForChild("UIStroke")}
+            for _, Overlay in pairs(LogFrame:WaitForChild("ViewTile"):WaitForChild("Overlay"):WaitForChild("Frame"):GetChildren()) do
+                table.insert(ItemsToFadeOut, Overlay)
+            end
+
+            for _, Item in pairs(ItemsToFadeOut) do
+                if Item:IsA("ImageLabel") then
+                    TweenService:Create(Item, LogExitInfo, {ImageTransparency = 1}):Play()
+                elseif Item:IsA("Frame") then
+                    TweenService:Create(Item, LogExitInfo, {BackgroundTransparency = 1}):Play()
+                elseif Item:IsA("UIStroke") then
+                    TweenService:Create(Item, LogExitInfo, {Transparency = 1}):Play()
+                elseif Item:IsA("TextLabel") then
+                    TweenService:Create(Item, LogExitInfo, {TextTransparency = 1}):Play()
+                end
+            end
+
+            task.wait(.7)
+
+            LogFrame:Destroy()
+        end)
 
     elseif Response == "Stock" or Response == "Insufficient" then
         -- TODO notify player that something has gone wrong, ensure funds have not been spent
@@ -207,6 +264,8 @@ local function InitializeStandardShop()
         local UtilityButtons = {CreditsButton, RobuxButton, GiftButton}
         CreditsButton.TextLabel.Text = "$" .. Data["Price"]
         RobuxButton.TextLabel.Text = "R$" .. Data["RobuxPrice"]
+        local ViewTile = MainFrame:WaitForChild("ViewTile")
+        ViewTile.Image.Image = Data["Image"]
 
         SoldierFrame.Parent = StandardFrame:WaitForChild("ScrollingFrame")
 

@@ -33,7 +33,8 @@ SETTINGS.SOLDIER_DATA = {
         ["BulletSpeed"] = 40,
         ["Price"] = 10,
         ["RobuxPrice"] = 3,
-        ["Rarity"] = 1
+        ["Rarity"] = 1,
+        ["Image"] = "rbxassetid://73900105861068"
     },
     ["The Shotgunner"] = {
         ["FireRate"] = 4,
@@ -41,7 +42,8 @@ SETTINGS.SOLDIER_DATA = {
         ["BulletSpeed"] = 40,
         ["Price"] = 25,
         ["RobuxPrice"] = 5,
-        ["Rarity"] = 1
+        ["Rarity"] = 1,
+        ["Image"] = "rbxassetid://73900105861068"
     },
     ["The Heavy"] = {
         ["FireRate"] = 4,
@@ -49,7 +51,8 @@ SETTINGS.SOLDIER_DATA = {
         ["BulletSpeed"] = 40,
         ["Price"] = 60,
         ["RobuxPrice"] = 10,
-        ["Rarity"] = .9
+        ["Rarity"] = .9,
+        ["Image"] = "rbxassetid://73900105861068"
     }
 }
 

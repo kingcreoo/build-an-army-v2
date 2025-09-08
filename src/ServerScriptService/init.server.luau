@@ -90,7 +90,7 @@ local function PurchaseSoldier(Player: Player, Type: string)
 
     -- 2) Check if player has sufficient funds
     local PlayerData = Data.Get(Player)
-    if PlayerData["leaderstats"]["Credits"] <= SETTINGS["SOLDIER_DATA"][Type]["Price"] then
+    if PlayerData["leaderstats"]["Credits"] < SETTINGS["SOLDIER_DATA"][Type]["Price"] then
         return "Insufficient"
     end
 
