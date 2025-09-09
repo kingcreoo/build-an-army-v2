@@ -24,6 +24,28 @@ local SetTargetEvent: RemoteEvent = Remotes:WaitForChild("SetTarget")
 local SetSoldierBindable: BindableEvent = Remotes:WaitForChild("SetSoldierBindable")
 local SetTargetBindable: BindableEvent = Remotes:WaitForChild("SetTargetBindable")
 
+local ClearSoldierEvent: RemoteEvent = Remotes:WaitForChild("ClearSoldier")
+local ClearSoldierBindable: BindableEvent = Remotes:WaitForChild("ClearSoldierBindable")
+
+-- // Local functions
+
+local function IsSoldierActive(ActiveSoldiers, SoldierID)
+    for Index, ID in pairs(ActiveSoldiers) do
+        if ID == SoldierID then
+            return Index
+        end
+    end
+    return false
+end
+
+local function ReindexTable(Table)
+    local Result = {}
+    for _, Value in pairs(Table) do
+        table.insert(Result, Value)
+    end
+    return Result
+end
+
 -- // Module functions
 function PlotManager.new(Player: Player, PlayerData: table, PlotAnchor: Part)
     local self = setmetatable({}, PlotManager)
@@ -39,6 +61,79 @@ function PlotManager.new(Player: Player, PlayerData: table, PlotAnchor: Part)
     RewardLoop.SetupRewards(self.Player)
 
     return self
+end
+
+function PlotManager:Deactivate(SoldierID: string)
+    -- 1) Get player data
+    local PlayerData = Data.Get(self.Player)
+
+    -- 2) Gauruntee player owns this soldier
+    if not PlayerData["Inventory"]["SoldierInventory"][SoldierID] then
+        print('1')
+        return false, PlayerData
+    end
+
+    -- 3) Gauruntee soldier is active
+    local Index = IsSoldierActive(PlayerData["Inventory"]["ActiveSoldiers"], SoldierID)
+    if not Index then
+        print('2')
+        return false, PlayerData
+    end
+
+    -- Deactivate soldier --
+
+    -- 1) Deactivate solder in the player data
+    PlayerData["Inventory"]["ActiveSoldiers"][Index] = nil
+
+    -- 2) Shuffle active soldiers
+    PlayerData["Inventory"]["ActiveSoldiers"] = ReindexTable(PlayerData["Inventory"]["ActiveSoldiers"])
+
+    -- 3) Set Data
+    Data.Set(self.Player, PlayerData)
+
+    -- 4) Fire ClearSoldier() functions
+    ClearSoldierEvent:FireAllClients(self.Player, "Slot" .. Index)
+    ClearSoldierBindable:Fire(self.Player.Name, "Slot" .. Index)
+
+    -- 5) Return to client
+    return true, PlayerData
+end
+
+function PlotManager:Activate(SoldierID: string)
+    -- 1) Get player data
+    local PlayerData = Data.Get(self.Player)
+
+    -- 2) Gauruntee player owns this soldier
+    if not PlayerData["Inventory"]["SoldierInventory"][SoldierID] then
+        return false, PlayerData
+    end
+
+    -- 3) Gauruntee soldier is inactive
+    local Index = IsSoldierActive(PlayerData["Inventory"]["ActiveSoldiers"], SoldierID)
+    if Index then
+        return false, PlayerData
+    end
+
+    -- 4) Gauruntee there is room to activate this soldier
+    local UnlockedLanes = {}
+    local PlotUnlocks = PlayerData.Plot.Unlocks
+    for i = 1, 7 do
+        if PlotUnlocks["Slot" .. tostring(i)] then
+            table.insert(UnlockedLanes, "Slot" .. tostring(i))
+        end
+    end
+
+    if #PlayerData["Inventory"]["ActiveSoldiers"] >= #UnlockedLanes then
+        return false, PlayerData
+    end
+
+    -- Activate soldier --
+
+    -- 1) Fire own function
+    self:SetSoldier("Slot" .. #PlayerData["Inventory"]["ActiveSoldiers"] + 1, SoldierID)
+
+    -- 2) Return to client
+    return true, PlayerData
 end
 
 function PlotManager:SetSoldier(SlotNumber: string, SoldierID: string)

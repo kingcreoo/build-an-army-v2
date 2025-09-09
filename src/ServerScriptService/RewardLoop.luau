@@ -20,6 +20,7 @@ local SetSoldierBindable: BindableEvent = Remotes:WaitForChild("SetSoldierBindab
 local SetTargetBindable: BindableEvent = Remotes:WaitForChild("SetTargetBindable")
 local SyncTablesFunction: RemoteFunction = Remotes:WaitForChild("SyncTables")
 local FireSoldierEvent: RemoteEvent = Remotes:WaitForChild("FireSoldier")
+local ClearSoldierBindable: BindableEvent = Remotes:WaitForChild("ClearSoldierBindable")
 
 local Soldiers = {}
 local Targets = {}
@@ -107,6 +108,35 @@ end
 
 function RewardLoop.GetPendingRewards(PlayerName: string)
     return PendingRewards[PlayerName]
+end
+
+function RewardLoop.ClearSoldier(PlayerName: string, Slot: string)
+    -- 0) Check if player exists in tables
+    if not Soldiers[PlayerName] then return end
+
+    -- 1) Find and remove soldier in specified slot
+    local SoldierIDToRemove
+    for ExistingSoldierID, ExistingSoldierData in pairs(Soldiers[PlayerName]) do
+        if ExistingSoldierData.Slot == Slot then
+            SoldierIDToRemove = ExistingSoldierID
+            break
+        end
+    end
+
+    if SoldierIDToRemove then
+        Soldiers[PlayerName][SoldierIDToRemove] = nil
+        Timers[PlayerName][SoldierIDToRemove] = nil
+    end
+
+    -- 2) Reindex remaining soldiers by moving higher slots down
+    local RemovedSlotNumber = tonumber(string.sub(Slot, 5))
+    for _, SoldierData in pairs(Soldiers[PlayerName]) do
+        local CurrentSlotNumber = tonumber(string.sub(SoldierData.Slot, 5))
+        if CurrentSlotNumber > RemovedSlotNumber then
+            -- Move soldier down one slot
+            SoldierData.Slot = "Slot" .. tostring(CurrentSlotNumber - 1)
+        end
+    end
 end
 
 function RewardLoop.SetSoldier(PlayerName: string, Slot: string, SoldierID: string, SoldierData: table)
@@ -256,6 +286,9 @@ end)
 SyncTablesFunction.OnServerInvoke = function()
     return RewardLoop.SyncTables()
 end
+ClearSoldierBindable.Event:Connect(function(PlayerName: string, Slot: string)
+    RewardLoop.ClearSoldier(PlayerName, Slot)
+end)
 
 -- // Return
 return RewardLoop

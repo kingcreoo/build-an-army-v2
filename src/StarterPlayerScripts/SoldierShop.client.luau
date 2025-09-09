@@ -41,9 +41,9 @@ local TemplateFrame: Frame = StandardFrame:WaitForChild("ScrollingFrame"):WaitFo
 
 local Buttons = {CloseButton, RefreshButton}
 
-local ButtonExpandBindable: BindableEvent = UI:WaitForChild("ButtonExpand")
-local ButtonDeflateBindable: BindableEvent = UI:WaitForChild("ButtonDeflate")
-local CloseFrameBindable: BindableEvent = UI:WaitForChild("CloseFrame")
+local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
+local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
+local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
 
 local FrameActive = false
 

@@ -23,9 +23,13 @@ local TimeOfStock
 local RecentPurchases = {}
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
 local RestockEvent: RemoteEvent = Remotes:WaitForChild("Restock")
 local GetStockFunction: RemoteFunction = Remotes:WaitForChild("GetStock")
 local PurchaseSoldierFunction: RemoteFunction = Remotes:WaitForChild("PurchaseSoldier")
+local LoadPlayerEvent: RemoteEvent = Remotes:WaitForChild("LoadPlayer")
+local ActivateSoldierFunction: RemoteFunction = Remotes:WaitForChild("ActivateSoldier")
+local DeactivateSoldierFunction: RemoteFunction = Remotes:WaitForChild("DeactivateSoldier")
 
 -- // Functions
 local function RNGStock(Rarity)
@@ -161,6 +165,7 @@ local function OnPlayerAdded(Player: Player)
     Character:SetPrimaryPartCFrame(PlayerPlot.Plot.Spawn.CFrame + Vector3.new(0, 3, 0))
 
     -- 5) TODO Present player's offline earnings
+    LoadPlayerEvent:FireClient(Player, PlayerData)
 end
 
 local function OnPlayerRemoving(Player: Player)
@@ -196,6 +201,18 @@ end
 
 PurchaseSoldierFunction.OnServerInvoke = function(Player: Player, Type: string)
     local Arg1, Arg2 = PurchaseSoldier(Player, Type)
+
+    return Arg1, Arg2
+end
+
+ActivateSoldierFunction.OnServerInvoke = function(Player: Player, SoldierID: string)
+    local Arg1, Arg2 = PlayerPlotManagers[Player.Name]:Activate(SoldierID)
+
+    return Arg1, Arg2
+end
+
+DeactivateSoldierFunction.OnServerInvoke = function(Player: Player, SoldierID: string)
+    local Arg1, Arg2 = PlayerPlotManagers[Player.Name]:Deactivate(SoldierID)
 
     return Arg1, Arg2
 end

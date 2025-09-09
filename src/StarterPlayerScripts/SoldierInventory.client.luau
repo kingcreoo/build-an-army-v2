@@ -3,8 +3,10 @@
 
 -- // Services
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- // Modules
+local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
 
 -- // Variables
 local LocalPlayer = Players.LocalPlayer
@@ -16,15 +18,174 @@ local FramesGui = LocalGui:WaitForChild("Frames")
 local SoldierInventoryFrame: Frame = FramesGui:WaitForChild("SoldierInventory")
 local CloseButton: TextButton = SoldierInventoryFrame:WaitForChild("Close")
 
+local ScrollingFrame = SoldierInventoryFrame:WaitForChild("Inventory"):WaitForChild("ScrollingFrame")
+local Template = ScrollingFrame:WaitForChild("Template")
+
 local Buttons = {CloseButton}
 
-local ButtonExpandBindable: BindableEvent = UI:WaitForChild("ButtonExpand")
-local ButtonDeflateBindable: BindableEvent = UI:WaitForChild("ButtonDeflate")
-local CloseFrameBindable: BindableEvent = UI:WaitForChild("CloseFrame")
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local LoadPlayerEvent: RemoteEvent = Remotes:WaitForChild("LoadPlayer")
+local ActivateSoldierFunction: RemoteFunction = Remotes:WaitForChild("ActivateSoldier")
+local DeactivateSoldierFunction: RemoteFunction = Remotes:WaitForChild("DeactivateSoldier")
+
+local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
+local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
+local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
+local UpdateInventoryBindable: BindableEvent = Remotes:WaitForChild("UpdateInventory")
+
+local ActivateBindable = Instance.new("BindableEvent")
+ActivateBindable.Parent = script
+ActivateBindable.Name = "DeactivateBindable"
+local DeactivateBindable = Instance.new("BindableEvent")
+DeactivateBindable.Parent = script
+DeactivateBindable.Name = "DeactivateBindable"
 
 local FrameActive = false
+local SoldiersDisplayed = {}
+local LatestData
 
 -- // Functions
+
+local function CreateReversedTable(Table)
+    local LookUp = {}
+    local MaxIndex = #Table
+    for i, Type in ipairs(Table) do
+        -- Map each soldier type to its reversed position
+        LookUp[Type] = MaxIndex - i + 1
+    end
+    return LookUp
+end
+local SHOP_ORDER_REVERSED = CreateReversedTable(SETTINGS.SHOP_ORDER)
+
+local function IsSoldierActive(ActiveSoldiers, SoldierID)
+    for Index, ID in pairs(ActiveSoldiers) do
+        if ID == SoldierID then
+            return Index
+        end
+    end
+    return false
+end
+
+local function CreateFrame(SoldierID, SoldierData, PlayerData)
+    local SoldierFrame = Template:Clone()
+    local ViewTile = SoldierFrame:WaitForChild("ViewTile")
+    local Button: TextButton = SoldierFrame:WaitForChild("Button")
+    ViewTile.Image.Image = SETTINGS.SOLDIER_DATA[SoldierData["Type"]]["Image"]
+    SoldierFrame.Name = SoldierID
+
+    local Index = IsSoldierActive(PlayerData["Inventory"]["ActiveSoldiers"], SoldierID)
+    if Index then
+        SoldierFrame.LayoutOrder = Index
+        SoldierFrame:WaitForChild("Active").Visible = true
+    else
+        SoldierFrame.LayoutOrder = 100 + (SHOP_ORDER_REVERSED[SoldierData["Type"]] or 999)
+        SoldierFrame:WaitForChild("Active").Visible = false
+    end
+
+    SoldierFrame.Visible = true
+    SoldierFrame.Parent = ScrollingFrame
+
+    SoldiersDisplayed[SoldierID] = SoldierFrame
+
+    Button.MouseButton1Click:Connect(function()
+        -- Check if this soldier is currently active or inactive
+        local Active = IsSoldierActive(LatestData["Inventory"]["ActiveSoldiers"], SoldierID)
+        if Active then
+            -- Soldier is active, fire deactivate function
+            DeactivateBindable:Fire(SoldierID)
+        else
+            -- Soldier is inactive, fire activate function
+            ActivateBindable:Fire(SoldierID)
+        end
+    end)
+end
+
+local function UpdateInventory(PlayerData: table)
+    LatestData = PlayerData
+
+    -- Check to see if a soldier has been added
+    for SoldierID, SoldierData in pairs(PlayerData["Inventory"]["SoldierInventory"]) do
+        -- If a new soldier has been added, create their frame
+        if not SoldiersDisplayed[SoldierID] then
+            CreateFrame(SoldierID, SoldierData, PlayerData)
+        end
+    end
+
+    -- Check to see if a soldier has been removed
+    for SoldierID, SoldierFrame in pairs(SoldiersDisplayed) do
+        -- If we have an extra soldier, destroy it
+        if not PlayerData["Inventory"]["SoldierInventory"][SoldierID] then
+            SoldierFrame:Destroy()
+            SoldiersDisplayed[SoldierID] = nil
+        end
+    end
+
+    -- Sync soldier layout order / active soldiers
+    for SoldierID, SoldierFrame in pairs(SoldiersDisplayed) do
+        local Index = IsSoldierActive(PlayerData["Inventory"]["ActiveSoldiers"], SoldierID)
+        if Index then
+            SoldierFrame.LayoutOrder = Index
+            SoldierFrame:WaitForChild("Active").Visible = true
+        else
+            local SoldierData = PlayerData["Inventory"]["SoldierInventory"][SoldierID]
+            SoldierFrame.LayoutOrder = 100 + (SHOP_ORDER_REVERSED[SoldierData["Type"]] or 999)
+            SoldierFrame:WaitForChild("Active").Visible = false
+        end
+    end
+end
+
+local function DeactivateSoldier(SoldierID)
+    -- 1) Simply ask server to deactivate this soldier
+    local Result, PlayerData = DeactivateSoldierFunction:InvokeServer(SoldierID)
+
+    -- 2) If the response is bad, warn the player
+    if Result == false then
+        warn("Something happened.. warn player")
+        -- TODO create notification GUI
+        return
+    end
+
+    -- 3) If the response is good, simply update the inventory with the new data
+    UpdateInventory(PlayerData)
+end
+
+local function ActivateSoldier(SoldierID)
+    -- 1) Check if there is ample room to activate soldier
+    local UnlockedLanes = {}
+    local PlotUnlocks = LatestData.Plot.Unlocks
+    for i = 1, 7 do
+        if PlotUnlocks["Slot" .. tostring(i)] then
+            table.insert(UnlockedLanes, "Slot" .. tostring(i))
+        end
+    end
+
+    if #LatestData["Inventory"]["ActiveSoldiers"] >= #UnlockedLanes then
+        -- If not, warn player
+        warn("There are already maximum unlocked players")
+        -- TODO create notification GUI
+        return
+    end
+
+    -- 2) Ask server to activate this soldier
+    local Response, PlayerData = ActivateSoldierFunction:InvokeServer(SoldierID)
+
+    -- 3) If the repsonse is bad, warn the player
+    if not Response then
+        warn("Problem with activation")
+        -- TODO create notification GUI
+        return
+    end
+
+    -- 4) If the response is good, update the inventory
+    UpdateInventory(PlayerData)
+end
+
+local function InitializeInventory(PlayerData: table)
+    for SoldierID, SoldierData in pairs(PlayerData["Inventory"]["SoldierInventory"]) do
+        CreateFrame(SoldierID, SoldierData, PlayerData)
+    end
+end
 
 -- // Events
 
@@ -47,3 +208,12 @@ end)
 SoldierInventoryFrame:GetPropertyChangedSignal("Visible"):Connect(function()
     FrameActive = SoldierInventoryFrame.Visible
 end)
+
+LoadPlayerEvent.OnClientEvent:Connect(function(PlayerData: table)
+    LatestData = PlayerData
+    InitializeInventory(PlayerData)
+end)
+
+UpdateInventoryBindable.Event:Connect(UpdateInventory)
+ActivateBindable.Event:Connect(ActivateSoldier)
+DeactivateBindable.Event:Connect(DeactivateSoldier)

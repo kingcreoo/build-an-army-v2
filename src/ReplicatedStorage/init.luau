@@ -21,8 +21,8 @@ SETTINGS.DEFAULT_DATA = {
     ["Inventory"] = {
         ["ActiveSoldiers"] = {},
         ["SoldierInventory"] = {},
-        ["ActiveTarget"] = "",
-        ["TargetInventory"] = {},
+        ["ActiveTarget"] = "Target1",
+        ["TargetInventory"] = {["Target1"] = true},
     }
 }
 

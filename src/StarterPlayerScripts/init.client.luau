@@ -17,6 +17,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local SetSoldierEvent: RemoteEvent = Remotes:WaitForChild("SetSoldier")
 local SetTargetEvent: RemoteEvent = Remotes:WaitForChild("SetTarget")
+local ClearSoldierEvent = Remotes:WaitForChild("ClearSoldier")
 
 -- // Functions
 
@@ -38,6 +39,15 @@ local function OnSetTarget(Player: Player, UnlockedLanes: table, TargetType: str
     PlotVisualizer.SetTarget(Player, UnlockedLanes, TargetType)
 end
 
+local function OnClearSoldier(Player: Player, Slot: string)
+    -- 1) Check for public animations being disabled
+    if Player ~= LocalPlayer and not PublicAnimations then return end
+
+    -- 2) Clear the soldier
+    PlotVisualizer.ClearSoldier(Player, Slot)
+end
+
 -- // Events
 SetSoldierEvent.OnClientEvent:Connect(OnSetSoldier)
 SetTargetEvent.OnClientEvent:Connect(OnSetTarget)
+ClearSoldierEvent.OnClientEvent:Connect(OnClearSoldier)

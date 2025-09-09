@@ -130,6 +130,8 @@ local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
         -- Recycle bullet
         EntityHandler:Recycle(Bullet)
 
+        -- TODO cleanup how explosions are handled
+
         -- Create explosion effect
         local Explosion = EntityHandler:Create("StandardExplosion")
         local Direction = (FinalTargetPosition - FirePoint.Position).Unit
@@ -286,6 +288,60 @@ RunService.Heartbeat:Connect(function()
           task.spawn(AnimateSoldiers, ReadyToFire)
       end
 end)
+
+function PlotVisualizer.ClearSoldier(Player: Player, Slot: string)
+    -- 0) Check if player exists in tables
+    if not Soldiers[Player.Name] then return end
+
+    -- 1) Find and remove soldier in specified slot
+    local SoldierIDToRemove
+    for SoldierID, SoldierData in pairs(Soldiers[Player.Name]) do
+        if SoldierData.Slot == Slot then
+            SoldierIDToRemove = SoldierID
+            break
+        end
+    end
+
+    if SoldierIDToRemove then
+        -- 2) Remove soldier model from workspace
+        local Plot = Workspace:WaitForChild("Plots"):WaitForChild(Player.Name)
+        local SoldierModel = Plot.Soldiers:FindFirstChild(SoldierIDToRemove)
+        if SoldierModel then
+            SoldierModel:Destroy()
+        end
+
+        -- 3) Remove from data tables
+        Soldiers[Player.Name][SoldierIDToRemove] = nil
+        SoldierTimers[SoldierIDToRemove] = nil
+
+        -- 4) Update lanes table
+        local SlotNumber = tonumber(string.sub(Slot, 5))
+        Lanes[Player.Name][SlotNumber] = nil
+    end
+
+    -- 5) Reindex remaining soldiers by moving higher slots down
+    local RemovedSlotNumber = tonumber(string.sub(Slot, 5))
+    for SoldierID, SoldierData in pairs(Soldiers[Player.Name]) do
+        local CurrentSlotNumber = tonumber(string.sub(SoldierData.Slot, 5))
+        if CurrentSlotNumber > RemovedSlotNumber then
+            -- Move soldier down one slot
+            local NewSlotNumber = CurrentSlotNumber - 1
+            SoldierData.Slot = "Slot" .. NewSlotNumber
+
+            -- Update lanes table
+            Lanes[Player.Name][NewSlotNumber] = SoldierID
+
+            -- Animate movement to new position if model exists
+            local Plot = Workspace:WaitForChild("Plots"):WaitForChild(Player.Name)
+            local SoldierModel = Plot.Soldiers:FindFirstChild(SoldierID)
+            if SoldierModel then
+                local NewPosition = Plot.SoldierSlots["Slot" .. NewSlotNumber].CFrame * CFrame.Angles(0, math.rad(-90), 0) + Vector3.new(0, 2.5, 0)
+
+                SoldierModel:SetPrimaryPartCFrame(NewPosition)
+            end
+        end
+    end
+end
 
 function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID: string, SoldierData: table)
     -- 1) Define variables

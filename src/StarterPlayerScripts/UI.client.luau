@@ -5,6 +5,7 @@
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- // Modules
 
@@ -31,9 +32,11 @@ local DeflationTweenInfo = TweenInfo.new(.075, Enum.EasingStyle.Quad, Enum.Easin
 local OpenTweenInfo = TweenInfo.new(.3, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 local CloseTweenInfo = TweenInfo.new(.1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
-local ButtonExpandBindable: BindableEvent = script:WaitForChild("ButtonExpand")
-local ButtonDeflateBindable: BindableEvent = script:WaitForChild("ButtonDeflate")
-local CloseFrameBindable: BindableEvent = script:WaitForChild("CloseFrame")
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
+local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
+local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
 
 local SoldierShopPrompt: ProximityPrompt = Workspace:WaitForChild("SoldierShop"):WaitForChild("PromptPart"):WaitForChild("Prompt")
 
