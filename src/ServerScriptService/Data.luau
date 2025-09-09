@@ -54,7 +54,7 @@ function Data.Initialize(Player: Player)
 end
 
 -- Handle setting player's data after changes
-function Data.Set(Player: Player, PlayerData: table)
+function Data.Set(Player: Player, PlayerData: table, DontSave: boolean)
     Database[Player.Name] = PlayerData
 
     local Leaderstats = Player:FindFirstChild("leaderstats")
@@ -65,6 +65,10 @@ function Data.Set(Player: Player, PlayerData: table)
                 StatObject.Value = Value
             end
         end
+    end
+
+    if DontSave then
+        return
     end
 
     local Success, ErrorMessage = pcall(function()

@@ -89,7 +89,7 @@ function PlotManager:Deactivate(SoldierID: string)
     PlayerData["Inventory"]["ActiveSoldiers"] = ReindexTable(PlayerData["Inventory"]["ActiveSoldiers"])
 
     -- 3) Set Data
-    Data.Set(self.Player, PlayerData)
+    Data.Set(self.Player, PlayerData, true)
 
     -- 4) Fire ClearSoldier() functions
     ClearSoldierEvent:FireAllClients(self.Player, "Slot" .. Index)
@@ -156,7 +156,7 @@ function PlotManager:SetSoldier(SlotNumber: string, SoldierID: string)
     -- 4) Update data
     PlayerData["Inventory"]["ActiveSoldiers"][tonumber(string.sub(SlotNumber, 5))] = SoldierID
     self.RLActiveSoldiers[tonumber(string.sub(SlotNumber, 5))] = SoldierID
-    Data.Set(self.Player, PlayerData)
+    Data.Set(self.Player, PlayerData, true)
 
     -- 5) Fire all clients to manage animating the soldier, and fire server
     SetSoldierEvent:FireAllClients(self.Player, SlotNumber, SoldierID, SoldierData)
