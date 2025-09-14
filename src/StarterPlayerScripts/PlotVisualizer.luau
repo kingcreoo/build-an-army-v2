@@ -70,6 +70,23 @@ local function EquipWeapon(SoldierModel: Model, WeaponType: string)
     return Weapon, PartsToRegenerate
 end
 
+local function AnimateExplosion(Position)
+    -- Create explosion effect
+    local Explosion = EntityHandler:Create("StandardExplosion")
+    Explosion.CFrame = CFrame.new(Position)
+    Explosion.Parent = Workspace.Explosions
+
+    -- Configure and trigger explosion particles
+    local ParticleEmitter = Explosion:FindFirstChild("ParticleEmitter")
+    ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 70, 70))
+    ParticleEmitter:Emit(8)
+
+    -- Cleanup explosion after 1 second
+    task.delay(1, function()
+        EntityHandler:Recycle(Explosion)
+    end)
+end
+
 local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
     -- 1) Get soldier and target models
     local Plot = Workspace:WaitForChild("Plots"):WaitForChild(PlayerName)
@@ -121,32 +138,17 @@ local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
 
     Tween:Play()
 
-    -- 7) Explode & cleanup on completion
-    Tween.Completed:Connect(function()
+    -- 7) Explosions and cleanup
+    task.delay(Duration, function()
+        -- Explosion
+        AnimateExplosion(FinalTargetPosition)
+
         -- Destroy tween
         Tween:Destroy()
         Bullet.AssemblyLinearVelocity = Vector3.zero
 
         -- Recycle bullet
         EntityHandler:Recycle(Bullet)
-
-        -- TODO cleanup how explosions are handled
-
-        -- Create explosion effect
-        local Explosion = EntityHandler:Create("StandardExplosion")
-        local Direction = (FinalTargetPosition - FirePoint.Position).Unit
-        Explosion.CFrame = CFrame.new(FinalTargetPosition - Direction)
-        Explosion.Parent = Workspace.Explosions
-
-        -- Configure and trigger explosion particles
-        local ParticleEmitter = Explosion:WaitForChild("ParticleEmitter")
-        ParticleEmitter.Color = ColorSequence.new(Color3.fromRGB(255, 70, 70))
-        ParticleEmitter:Emit(8)
-
-        -- Cleanup explosion after 1 second
-        task.delay(1, function()
-            EntityHandler:Recycle(Explosion)
-        end)
     end)
 
     return Duration
