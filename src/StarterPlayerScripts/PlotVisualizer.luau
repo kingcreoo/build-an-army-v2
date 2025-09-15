@@ -314,14 +314,12 @@ local function SoldierPromise(Player, SoldierID, SoldierData, SoldierModel, Slot
     end)
 
     SpawnPromise:andThen(function()
-        print('1')
         if SoldierData and not SoldierData.Cancelled then
             SoldierData.Spawning = false
             SoldierData.SpawnReject = nil
             SoldierData.SpawnPromise = nil
         end
     end):catch(function()
-        print("2")
         if SoldierData then
             Soldiers[Player.Name][SoldierID] = nil
             Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))] = nil

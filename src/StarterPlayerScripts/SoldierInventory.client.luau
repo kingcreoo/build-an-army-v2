@@ -33,6 +33,7 @@ local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
 local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
 local UpdateInventoryBindable: BindableEvent = Remotes:WaitForChild("UpdateInventory")
+local NotifyBindable: BindableEvent = Remotes:WaitForChild("NotifyBindable")
 
 local ActivateBindable = Instance.new("BindableEvent")
 ActivateBindable.Parent = script
@@ -143,7 +144,7 @@ local function DeactivateSoldier(SoldierID)
 
     -- 2) If the response is bad, warn the player
     if Result == false then
-        warn("Something happened.. warn player")
+        NotifyBindable:Fire("Couldn't deactivate soldier!", .8, Color3.fromRGB(255, 0, 0))
         -- TODO create notification GUI
         return
     end
@@ -164,8 +165,8 @@ local function ActivateSoldier(SoldierID)
 
     if #LatestData["Inventory"]["ActiveSoldiers"] >= #UnlockedLanes then
         -- If not, warn player
-        warn("There are already maximum unlocked players")
-        -- TODO create notification GUI
+        -- TODO prompt player to purchase gamepass for more lanes
+        NotifyBindable:Fire("Maximum soldiers!", .8, Color3.fromRGB(255, 0, 0))
         return
     end
 
@@ -174,8 +175,7 @@ local function ActivateSoldier(SoldierID)
 
     -- 3) If the repsonse is bad, warn the player
     if not Response then
-        warn("Problem with activation")
-        -- TODO create notification GUI
+        NotifyBindable:Fire("Couldn't activate soldier!", .8, Color3.fromRGB(255, 0, 0))
         return
     end
 

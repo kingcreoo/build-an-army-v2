@@ -22,6 +22,9 @@ local FramesGui: ScreenGui = LocalGui:WaitForChild("Frames")
 local SoldierShopFrame: Frame = FramesGui:WaitForChild("SoldierShop")
 local SoldierInventoryFrame: Frame = FramesGui:WaitForChild("SoldierInventory")
 
+local NotificationFrame: Frame = FramesGui:WaitForChild("NotificationFrame")
+local TemplateNotification: TextLabel = NotificationFrame:WaitForChild("TemplateNotification")
+
 local PromptedFrames = {SoldierShopFrame}
 local PromptedFrameDebounces = {SoldierShopFrame = false}
 
@@ -37,6 +40,7 @@ local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
 local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
+local NotifyBindable: BindableEvent = Remotes:WaitForChild("NotifyBindable")
 
 local SoldierShopPrompt: ProximityPrompt = Workspace:WaitForChild("SoldierShop"):WaitForChild("PromptPart"):WaitForChild("Prompt")
 
@@ -150,6 +154,26 @@ local function OpenFrame(Frame: Frame)
     OpenTween:Play()
 end
 
+local function Notify(Message: string, Time: number, Color: Color3Value)
+    local Notification = TemplateNotification:Clone()
+    Notification.Text = Message
+    Notification.TextColor3 = Color
+    Notification.LayoutOrder = 1
+    Notification.Visible = true
+    Notification.Parent = NotificationFrame
+
+    task.delay(Time, function()
+        local FadeTween1 = TweenService:Create(Notification, TweenInfo.new(.4), {TextTransparency = 1})
+        FadeTween1:Play()
+        local FadeTween2 = TweenService:Create(Notification:WaitForChild("UIStroke"), TweenInfo.new(.4), {Transparency = 1})
+        FadeTween2:Play()
+
+        FadeTween2.Completed:Connect(function()
+            Notification:Destroy()
+        end)
+    end)
+end
+
 -- // Events
 for _, Button in pairs(HUDButtons) do
     Button.MouseEnter:Connect(function()
@@ -197,6 +221,8 @@ SoldierShopPrompt.PromptHidden:Connect(function()
     if SoldierShopFrame.Visible == false then return end
     CloseFrame(SoldierShopFrame)
 end)
+
+NotifyBindable.Event:Connect(Notify)
 
 -- TODO Wait for loading screen to finish
 HUD.Enabled = true

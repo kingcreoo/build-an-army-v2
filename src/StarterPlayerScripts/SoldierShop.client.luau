@@ -44,6 +44,7 @@ local Buttons = {CloseButton, RefreshButton}
 local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
 local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
+local NotifyBindable: BindableEvent = Remotes:WaitForChild("NotifyBindable")
 
 local FrameActive = false
 
@@ -72,15 +73,21 @@ end
 local CDB = false
 local function PressCreditsButton(SoldierFrame: Frame, Type: string)
     -- 1) Check debounce
-    if CDB then return end
+    if CDB then
+        NotifyBindable:Fire("Slow down!", .8, Color3.fromRGB(255, 0, 0))
+        return
+    end
     CDB = true
 
     -- 2) Check if in stock (considering recent purchases)
-    if CurrentStock[Type] <= 0 then return end
+    if CurrentStock[Type] <= 0 then
+        NotifyBindable:Fire("Not in stock!", .8, Color3.fromRGB(255, 0, 0))
+        return
+    end
 
     -- 3) Check if has cash
     if LocalPlayer:WaitForChild("leaderstats"):WaitForChild("Credits").Value < SETTINGS.SOLDIER_DATA[Type]["Price"] then 
-        -- TODO Notify player of insufficient funds
+        NotifyBindable:Fire("Not enough credits!", .8, Color3.fromRGB(255, 0, 0))
         return
     end
 
@@ -151,8 +158,7 @@ local function PressCreditsButton(SoldierFrame: Frame, Type: string)
         end)
 
     elseif Response == "Stock" or Response == "Insufficient" then
-        -- TODO notify player that something has gone wrong, ensure funds have not been spent
-        warn(Response)
+        NotifyBindable:Fire("Error purchasing, funds returned!", .8, Color3.fromRGB(255, 0, 0))
     end
 
     task.wait(.075)

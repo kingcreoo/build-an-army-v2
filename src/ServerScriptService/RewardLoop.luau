@@ -120,13 +120,11 @@ local function SoldierPromise(PlayerName, SoldierID, SoldierData)
     end)
 
     SpawnPromise:andThen(function()
-        print('server 1')
         if SoldierData and not SoldierData.Cancelled then
             SoldierData.Spawning = false
             SoldierData.SpawnReject = nil
         end
     end):catch(function()
-        print('server 2')
         if SoldierData then
             Soldiers[PlayerName][SoldierID] = nil
             Timers[PlayerName][SoldierID] = nil
