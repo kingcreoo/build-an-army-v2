@@ -386,6 +386,7 @@ function PlotVisualizer.ClearSoldier(Player: Player, Slot: string)
 
             -- Update lanes table
             Lanes[Player.Name][NewSlotNumber] = SoldierID
+            Lanes[Player.Name][CurrentSlotNumber] = nil
 
             -- Animate movement to new position if model exists
             local Plot = Workspace:WaitForChild("Plots"):WaitForChild(Player.Name)
