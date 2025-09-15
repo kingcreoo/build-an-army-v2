@@ -104,6 +104,35 @@ local function FireSoldiers(SoldiersToFire)
     end
 end
 
+local function SoldierPromise(PlayerName, SoldierID, SoldierData)
+    local Promise = require(game:GetService("ReplicatedStorage").Settings.Promise)
+
+    SoldierData.Spawning = true
+    local SpawnPromise = Promise.new(function(Resolve, Reject)
+        SoldierData.SpawnReject = Reject
+        task.delay(2, function()
+            if not SoldierData.Cancelled then
+                Resolve()
+            end
+        end)
+    end)
+
+    SpawnPromise:andThen(function()
+        print('server 1')
+        if SoldierData and not SoldierData.Cancelled then
+            Soldiers[PlayerName][SoldierID] = SoldierData
+            SoldierData.Spawning = false
+            SoldierData.SpawnReject = nil
+        end
+    end):catch(function()
+        print('server 2')
+        if SoldierData then
+            SoldierData.Spawning = nil
+            SoldierData.SpawnReject = nil
+        end
+    end)
+end
+
 -- // Module Functions
 
 function RewardLoop.GetPendingRewards(PlayerName: string)
@@ -124,6 +153,13 @@ function RewardLoop.ClearSoldier(PlayerName: string, Slot: string)
     end
 
     if SoldierIDToRemove then
+        -- Check for promises
+        local TargetSoldierData = Soldiers[PlayerName][SoldierIDToRemove]
+        if TargetSoldierData and TargetSoldierData.SpawnReject then
+            TargetSoldierData.Cancelled = true
+            TargetSoldierData.SpawnReject()
+        end
+        
         Soldiers[PlayerName][SoldierIDToRemove] = nil
         Timers[PlayerName][SoldierIDToRemove] = nil
     end
@@ -160,9 +196,7 @@ function RewardLoop.SetSoldier(PlayerName: string, Slot: string, SoldierID: stri
 
     -- 2) Add new soldier
     SoldierData.Slot = Slot
-    task.delay(2, function()
-      Soldiers[PlayerName][SoldierID] = SoldierData
-    end)
+    SoldierPromise(PlayerName, SoldierID, SoldierData)
 end
 
 function RewardLoop.SetTarget(PlayerName: string, UnlockedLanes: table, TargetType: string)
@@ -214,6 +248,11 @@ function RewardLoop.Init()
 
                 -- Check if the target is due to die
                 if DueDeaths[PlayerName][SoldierData.Slot] == true then
+                    continue
+                end
+
+                -- Check to see if the soldier is spawning, if so we skip
+                if SoldierData.Spawning then
                     continue
                 end
 

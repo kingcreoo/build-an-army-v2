@@ -94,7 +94,7 @@ local function AnimateBullet(PlayerName, SoldierID, SoldierData, TargetSlot)
         return 0
     end
 
-    local SoldierModel = Plot.Soldiers[SoldierID]
+    local SoldierModel = Plot.Soldiers:FindFirstChild(SoldierID)
     local TargetModel = Plot.Targets:FindFirstChild("Target" .. string.sub(TargetSlot, 5))
 
     if not SoldierModel or not TargetModel then
@@ -260,6 +260,11 @@ RunService.Heartbeat:Connect(function()
                 continue
             end
 
+            -- Check to see if the soldier is spawning, if so we skip
+            if SoldierData.Spawning then
+                continue
+            end
+
             -- 1) Get soldier's base stats
             local BaseFireRate = SETTINGS["SOLDIER_DATA"][SoldierData.Type]["FireRate"]
 
@@ -291,6 +296,44 @@ RunService.Heartbeat:Connect(function()
       end
 end)
 
+local function SoldierPromise(Player, SoldierID, SoldierData, SoldierModel, SlotNumber)
+    local Promise = require(game:GetService("ReplicatedStorage").Settings.Promise)
+
+    SoldierData.Spawning = true
+    local SpawnPromise = Promise.new(function(Resolve, Reject)
+        SoldierData.SpawnReject = Reject
+        task.delay(2, function()
+            if not SoldierData.Cancelled then
+                Resolve()
+            end
+        end)
+    end)
+
+    SpawnPromise:andThen(function()
+        print('1')
+        if SoldierData and not SoldierData.Cancelled then
+            Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))] = SoldierID
+            Soldiers[Player.Name][SoldierID] = SoldierData
+            SoldierData.Slot = SlotNumber
+            SoldierData.Spawning = false
+            SoldierData.SpawnReject = nil
+            SoldierData.SpawnPromise = nil
+        end
+    end):catch(function()
+        print("2")
+        if SoldierData then
+            if SoldierModel then
+                SoldierModel:Destroy()
+            end
+            SoldierData.Spawning = nil
+            SoldierData.SpawnReject = nil
+            SoldierData.SpawnPromise = nil
+        end
+    end)
+
+    SoldierData.SpawnPromise = SpawnPromise
+end
+
 function PlotVisualizer.ClearSoldier(Player: Player, Slot: string)
     -- 0) Check if player exists in tables
     if not Soldiers[Player.Name] then return end
@@ -304,24 +347,32 @@ function PlotVisualizer.ClearSoldier(Player: Player, Slot: string)
         end
     end
 
+    -- 2) Man I don't even know
     if SoldierIDToRemove then
-        -- 2) Remove soldier model from workspace
+        -- 0) Check for promises
+        local TargetSoldierData = Soldiers[Player.Name][SoldierIDToRemove]
+        if TargetSoldierData.SpawnReject then
+            TargetSoldierData.Cancelled = true
+            TargetSoldierData.SpawnReject()
+        end
+
+        -- 1) Remove soldier model from workspace
         local Plot = Workspace:WaitForChild("Plots"):WaitForChild(Player.Name)
         local SoldierModel = Plot.Soldiers:FindFirstChild(SoldierIDToRemove)
         if SoldierModel then
             SoldierModel:Destroy()
         end
 
-        -- 3) Remove from data tables
+        -- 2) Remove from data tables
         Soldiers[Player.Name][SoldierIDToRemove] = nil
         SoldierTimers[SoldierIDToRemove] = nil
 
-        -- 4) Update lanes table
+        -- 3) Update lanes table
         local SlotNumber = tonumber(string.sub(Slot, 5))
         Lanes[Player.Name][SlotNumber] = nil
     end
 
-    -- 5) Reindex remaining soldiers by moving higher slots down
+    -- 3) Reindex remaining soldiers by moving higher slots down
     local RemovedSlotNumber = tonumber(string.sub(Slot, 5))
     for SoldierID, SoldierData in pairs(Soldiers[Player.Name]) do
         local CurrentSlotNumber = tonumber(string.sub(SoldierData.Slot, 5))
@@ -358,7 +409,10 @@ function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID
         Plot:WaitForChild("Soldiers"):WaitForChild(ExistingSoldierID):Destroy()
     end
 
-    -- 3) Spawn animation
+    -- 3) Promise
+    SoldierPromise(Player, SoldierID, SoldierData, SoldierModel, SlotNumber)
+
+    -- 4) Spawn animation
     SoldierModel.Name = SoldierID
     local PartsToRegenerate = {}
     for _, Inst in pairs(SoldierModel:GetChildren()) do
@@ -386,12 +440,13 @@ function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID
         RegenerationTween:Play()
     end
 
-    -- 4) Set new soldier after animations
-    task.delay(2, function()
-      Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))] = SoldierID
-      SoldierData["Slot"] = SlotNumber
-      Soldiers[Player.Name][SoldierID] = SoldierData
-    end)
+    -- OLD) Set new soldier after animations
+    --task.delay(2, function()
+    --  Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))] = SoldierID
+    --  SoldierData["Slot"] = SlotNumber
+    --  Soldiers[Player.Name][SoldierID] = SoldierData
+    --end)
+    
 end
 
 function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetType: string)
