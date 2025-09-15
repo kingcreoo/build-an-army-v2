@@ -299,7 +299,11 @@ end)
 local function SoldierPromise(Player, SoldierID, SoldierData, SoldierModel, SlotNumber)
     local Promise = require(game:GetService("ReplicatedStorage").Settings.Promise)
 
+    SoldierData.Slot = SlotNumber
     SoldierData.Spawning = true
+    Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))] = SoldierID
+    Soldiers[Player.Name][SoldierID] = SoldierData
+
     local SpawnPromise = Promise.new(function(Resolve, Reject)
         SoldierData.SpawnReject = Reject
         task.delay(2, function()
@@ -312,9 +316,6 @@ local function SoldierPromise(Player, SoldierID, SoldierData, SoldierModel, Slot
     SpawnPromise:andThen(function()
         print('1')
         if SoldierData and not SoldierData.Cancelled then
-            Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))] = SoldierID
-            Soldiers[Player.Name][SoldierID] = SoldierData
-            SoldierData.Slot = SlotNumber
             SoldierData.Spawning = false
             SoldierData.SpawnReject = nil
             SoldierData.SpawnPromise = nil
@@ -322,6 +323,8 @@ local function SoldierPromise(Player, SoldierID, SoldierData, SoldierModel, Slot
     end):catch(function()
         print("2")
         if SoldierData then
+            Soldiers[Player.Name][SoldierID] = nil
+            Lanes[Player.Name][tonumber(string.sub(SlotNumber, 5))] = nil
             if SoldierModel then
                 SoldierModel:Destroy()
             end

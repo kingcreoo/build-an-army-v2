@@ -108,6 +108,8 @@ local function SoldierPromise(PlayerName, SoldierID, SoldierData)
     local Promise = require(game:GetService("ReplicatedStorage").Settings.Promise)
 
     SoldierData.Spawning = true
+    Soldiers[PlayerName][SoldierID] = SoldierData
+
     local SpawnPromise = Promise.new(function(Resolve, Reject)
         SoldierData.SpawnReject = Reject
         task.delay(2, function()
@@ -120,13 +122,14 @@ local function SoldierPromise(PlayerName, SoldierID, SoldierData)
     SpawnPromise:andThen(function()
         print('server 1')
         if SoldierData and not SoldierData.Cancelled then
-            Soldiers[PlayerName][SoldierID] = SoldierData
             SoldierData.Spawning = false
             SoldierData.SpawnReject = nil
         end
     end):catch(function()
         print('server 2')
         if SoldierData then
+            Soldiers[PlayerName][SoldierID] = nil
+            Timers[PlayerName][SoldierID] = nil
             SoldierData.Spawning = nil
             SoldierData.SpawnReject = nil
         end
