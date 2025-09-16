@@ -12,6 +12,8 @@ local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local LoadPlayerEvent: RemoteEvent = Remotes:WaitForChild("LoadPlayer")
+local UpdateSettingFunction: RemoteFunction = Remotes:WaitForChild("UpdateSetting")
+local UpdateSettingBindable: BindableEvent = Remotes:WaitForChild("UpdateSettingBindable")
 local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
 local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
@@ -72,6 +74,34 @@ local function LoadSettings(PlayerData)
     end
 end
 
+local Bounces = 0
+local function ChangeSetting(Item: string)
+    if Bounces >= 3 then
+        NotifyBindable:Fire("Slow down!", .8, Color3.fromRGB(255, 0, 0))
+        return
+    end
+
+    Bounces += 1
+
+    local Success, On, ErrorMessage = UpdateSettingFunction:InvokeServer(Item)
+
+    if not Success then
+        NotifyBindable:Fire(ErrorMessage, .8, Color3.fromRGB(255, 0, 0))
+
+        task.delay(1, function()
+            Bounces -= 1
+        end)
+
+        return
+    end
+
+    UpdateItem(Item, On)
+
+    task.delay(1, function()
+        Bounces -= 1
+    end)
+end
+
 -- // Events
 
 for _, Button in pairs(Buttons) do
@@ -94,4 +124,14 @@ CloseButton.MouseButton1Click:Connect(function()
     CloseFrameBindable:Fire(SettingsFrame)
 end)
 
+AEButton.MouseButton1Click:Connect(function()
+    ChangeSetting("AutoEquip")
+end)
+
+PMButton.MouseButton1Click:Connect(function()
+    ChangeSetting("PotatoMode")
+end)
+
 LoadPlayerEvent.OnClientEvent:Connect(LoadSettings)
+
+UpdateSettingBindable.Event:Connect(UpdateItem)

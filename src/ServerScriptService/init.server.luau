@@ -24,6 +24,7 @@ local RecentPurchases = {}
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
+local UpdateSettingFunction: RemoteFunction = Remotes:WaitForChild("UpdateSetting")
 local RestockEvent: RemoteEvent = Remotes:WaitForChild("Restock")
 local GetStockFunction: RemoteFunction = Remotes:WaitForChild("GetStock")
 local PurchaseSoldierFunction: RemoteFunction = Remotes:WaitForChild("PurchaseSoldier")
@@ -179,6 +180,26 @@ local function OnPlayerRemoving(Player: Player)
     PlayerPlotManagers[Player.Name] = nil
 end
 
+local function UpdateSetting(Player: Player, Item: string)
+    local PlayerData = Data.Get(Player)
+
+    local CurrentValue = PlayerData["Settings"][Item]
+
+    if SETTINGS.DEFAULT_DATA.Settings[Item] == nil then
+      return false, nil, "Error, no settings changed!"
+    end
+
+    if CurrentValue then
+        PlayerData["Settings"][Item] = false
+        Data.Set(Player, PlayerData, true)
+        return true, false
+    else
+        PlayerData["Settings"][Item] = true
+        Data.Set(Player, PlayerData, true)
+        return true, true
+    end
+end
+
 -- // Events & Calling
 RewardLoop.Init()
 Players.PlayerAdded:Connect(OnPlayerAdded)
@@ -215,4 +236,10 @@ DeactivateSoldierFunction.OnServerInvoke = function(Player: Player, SoldierID: s
     local Arg1, Arg2 = PlayerPlotManagers[Player.Name]:Deactivate(SoldierID)
 
     return Arg1, Arg2
+end
+
+UpdateSettingFunction.OnServerInvoke = function(Player: Player, Item: string)
+    local Arg1, Arg2, Arg3 = UpdateSetting(Player, Item)
+
+    return Arg1, Arg2, Arg3
 end
