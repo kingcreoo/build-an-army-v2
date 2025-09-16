@@ -17,18 +17,21 @@ local FramesGui = LocalGui:WaitForChild("Frames")
 
 local SoldierInventoryFrame: Frame = FramesGui:WaitForChild("SoldierInventory")
 local CloseButton: TextButton = SoldierInventoryFrame:WaitForChild("Close")
+local AutoEquipButton: TextButton = SoldierInventoryFrame:WaitForChild("AutoEquip")
 
 local ScrollingFrame = SoldierInventoryFrame:WaitForChild("Inventory"):WaitForChild("ScrollingFrame")
 local Template = ScrollingFrame:WaitForChild("Template")
 
-local Buttons = {CloseButton}
+local Buttons = {CloseButton, AutoEquipButton}
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
 local LoadPlayerEvent: RemoteEvent = Remotes:WaitForChild("LoadPlayer")
 local ActivateSoldierFunction: RemoteFunction = Remotes:WaitForChild("ActivateSoldier")
 local DeactivateSoldierFunction: RemoteFunction = Remotes:WaitForChild("DeactivateSoldier")
+local UpdateSettingFunction: RemoteFunction = Remotes:WaitForChild("UpdateSetting")
 
+local UpdateSettingBindable: BindableEvent = Remotes:WaitForChild("UpdateSettingBindable")
 local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
 local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
@@ -183,6 +186,56 @@ local function ActivateSoldier(SoldierID)
     UpdateInventory(PlayerData)
 end
 
+local function UpdateAE(On: boolean)
+    UpdateSettingBindable:Fire("AutoEquip", On)
+
+    if On then
+        local Color1 = AutoEquipButton:GetAttribute("OnColor1")
+        local Color2 = AutoEquipButton:GetAttribute("OnColor2")
+
+        AutoEquipButton.BackgroundColor3 = Color1
+        AutoEquipButton.UIStroke.Color = Color2
+        AutoEquipButton.TextLabel.UIStroke.Color = Color2
+        AutoEquipButton.TextLabel.Text = "On"
+    else
+        local Color1 = AutoEquipButton:GetAttribute("OffColor1")
+        local Color2 = AutoEquipButton:GetAttribute("OffColor2")
+
+        AutoEquipButton.BackgroundColor3 = Color1
+        AutoEquipButton.UIStroke.Color = Color2
+        AutoEquipButton.TextLabel.UIStroke.Color = Color2
+        AutoEquipButton.TextLabel.Text = "Off"
+    end
+end
+
+local Bounces = 0
+local function ChangeAE()
+    if Bounces >= 3 then
+        NotifyBindable:Fire("Slow down!", .8, Color3.fromRGB(255, 0, 0))
+        return
+    end
+
+    Bounces += 1
+
+    local Success, On, ErrorMessage = UpdateSettingFunction:InvokeServer("AutoEquip")
+
+    if not Success then
+        NotifyBindable:Fire(ErrorMessage, .8, Color3.fromRGB(255, 0, 0))
+
+        task.delay(1, function()
+            Bounces -= 1
+        end)
+
+        return
+    end
+
+    UpdateAE(On)
+
+    task.delay(1, function()
+        Bounces -= 1
+    end)
+end
+
 local function InitializeInventory(PlayerData: table)
     for SoldierID, SoldierData in pairs(PlayerData["Inventory"]["SoldierInventory"]) do
         CreateFrame(SoldierID, SoldierData, PlayerData)
@@ -214,7 +267,10 @@ end)
 LoadPlayerEvent.OnClientEvent:Connect(function(PlayerData: table)
     LatestData = PlayerData
     InitializeInventory(PlayerData)
+    UpdateAE(PlayerData.Settings.AutoEquip)
 end)
+
+AutoEquipButton.MouseButton1Click:Connect(ChangeAE)
 
 UpdateInventoryBindable.Event:Connect(UpdateInventory)
 ActivateBindable.Event:Connect(ActivateSoldier)
