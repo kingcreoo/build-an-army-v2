@@ -21,6 +21,7 @@ local SettingsButton: TextButton = HUD:WaitForChild("Settings")
 local FramesGui: ScreenGui = LocalGui:WaitForChild("Frames")
 local SoldierShopFrame: Frame = FramesGui:WaitForChild("SoldierShop")
 local SoldierInventoryFrame: Frame = FramesGui:WaitForChild("SoldierInventory")
+local SettingsFrame: Frame = FramesGui:WaitForChild("SettingsFrame")
 
 local NotificationFrame: Frame = FramesGui:WaitForChild("NotificationFrame")
 local TemplateNotification: TextLabel = NotificationFrame:WaitForChild("TemplateNotification")
@@ -200,6 +201,23 @@ SoldiersButton.MouseButton1Click:Connect(function()
 
     task.wait(.5)
     SBD = false
+end)
+
+local SettingsDB = false
+SettingsButton.MouseButton1Click:Connect(function()
+    if not HUDActive then return end
+
+    if SettingsDB then return end
+    SettingsDB = true
+
+    if ActiveFrame == SettingsDB then
+        CloseFrame(SettingsFrame)
+    else
+        OpenFrame(SettingsFrame)
+    end
+
+    task.wait(.5)
+    SettingsDB = false
 end)
 
 ButtonExpandBindable.Event:Connect(ButtonExpand)
