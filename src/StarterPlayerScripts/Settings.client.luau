@@ -11,6 +11,7 @@ local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
 -- // Variables
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 
+local LoadPlayerEvent: RemoteEvent = Remotes:WaitForChild("LoadPlayer")
 local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
 local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
@@ -27,11 +28,49 @@ local SettingsFrame: Frame = FramesGui:WaitForChild("SettingsFrame")
 local MainFrame: Frame = SettingsFrame:WaitForChild("MainFrame")
 local CloseButton: TextButton = SettingsFrame:WaitForChild("Close")
 
-local Buttons = {CloseButton}
+local AutoEquipFolder = SettingsFrame:WaitForChild("AutoEquip")
+local AEButton = AutoEquipFolder:WaitForChild("Button")
+local AELabel = AutoEquipFolder:WaitForChild("TextLabel")
+
+local PotatoModeFolder = SettingsFrame:WaitForChild("PotatoMode")
+local PMButton = PotatoModeFolder:WaitForChild("Button")
+local PMLabel = PotatoModeFolder:WaitForChild("TextLabel")
+
+local Buttons = {CloseButton, AEButton, PMButton}
+local Items = {
+    ["AutoEquip"] = {["Folder"] = AutoEquipFolder, ["Button"] = AEButton, ["Label"] = AELabel},
+    ["PotatoMode"] = {["Folder"] = PotatoModeFolder, ["Button"] = PMButton, ["Label"] = PMLabel}
+}
 
 local FrameActive
 
 -- // Functions
+
+local function UpdateItem(Item: string, On: boolean)
+    if On then
+        local Color1 = Items[Item].Button:GetAttribute("OnColor1")
+        local Color2 = Items[Item].Button:GetAttribute("OnColor2")
+
+        Items[Item].Button.BackgroundColor3 = Color1
+        Items[Item].Button.UIStroke.Color = Color2
+        Items[Item].Button.TextLabel.UIStroke.Color = Color2
+        Items[Item].Button.TextLabel.Text = "On"
+    else
+        local Color1 = Items[Item].Button:GetAttribute("OffColor1")
+        local Color2 = Items[Item].Button:GetAttribute("OffColor2")
+
+        Items[Item].Button.BackgroundColor3 = Color1
+        Items[Item].Button.UIStroke.Color = Color2
+        Items[Item].Button.TextLabel.UIStroke.Color = Color2
+        Items[Item].Button.TextLabel.Text = "Off"
+    end
+end
+
+local function LoadSettings(PlayerData)
+    for Item, On in pairs(PlayerData["Settings"]) do
+        UpdateItem(Item, On)
+    end
+end
 
 -- // Events
 
@@ -54,3 +93,5 @@ CloseButton.MouseButton1Click:Connect(function()
     if FrameActive == false then return end
     CloseFrameBindable:Fire(SettingsFrame)
 end)
+
+LoadPlayerEvent.OnClientEvent:Connect(LoadSettings)

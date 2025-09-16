@@ -23,6 +23,10 @@ SETTINGS.DEFAULT_DATA = {
         ["SoldierInventory"] = {},
         ["ActiveTarget"] = "Target1",
         ["TargetInventory"] = {["Target1"] = true},
+    },
+    ["Settings"] = {
+        ["AutoEquip"] = false,
+        ["PotatoMode"] = true
     }
 }
 
