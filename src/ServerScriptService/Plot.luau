@@ -20,6 +20,8 @@ local PlotTemplate = ReplicatedStorage:WaitForChild("PlotTemplate")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local TargetModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Targets")
 
+local NotifyEvent: RemoteEvent = Remotes:WaitForChild("Notify")
+
 local SetSoldierEvent: RemoteEvent = Remotes:WaitForChild("SetSoldier")
 local SetTargetEvent: RemoteEvent = Remotes:WaitForChild("SetTarget")
 
@@ -195,7 +197,12 @@ function PlotManager:SetTarget(TargetType: string)
     SetTargetBindable:Fire(self.Player.Name, UnlockedLanes, TargetType)
 end
 
-function PlotManager:DisplayTarget(TargetType: string)
+function PlotManager:DisplayTarget(TargetType: string, Complete: boolean)
+    -- 0) If player has completed all targets, then print as such
+    if Complete then
+        self.Plot:WaitForChild("UpgradeTarget").AmountGui.Amount.Text = "COMPLETE"
+    end
+
     -- 1) Define variables
     local Plot = self.Plot
     local TargetModel: Model = TargetModels:WaitForChild(TargetType):Clone()
@@ -214,6 +221,44 @@ function PlotManager:DisplayTarget(TargetType: string)
 
     -- 4) Update price
     Plot:WaitForChild("UpgradeTarget").AmountGui.Amount.Text = "$" .. Settings["TARGET_DATA"][TargetType]["Price"]
+end
+
+function PlotManager:UpgradeTarget()
+    -- 0) Get variables
+    local PlayerData = Data.Get(self.Player)
+    local CurrentTarget = PlayerData.Inventory.ActiveTarget
+
+    print(CurrentTarget, table.find(Settings["TARGET_ORDER"], CurrentTarget)+1, table.find(Settings["TARGET_ORDER"], table.find(Settings["TARGET_ORDER"], CurrentTarget)+1))
+    print(Settings["TARGET_ORDER"][table.find(Settings["TARGET_ORDER"], CurrentTarget)+1])
+
+    -- 1) Check if there is a new target to be unlocked
+    if not Settings["TARGET_ORDER"][table.find(Settings["TARGET_ORDER"], CurrentTarget)+1] then
+        NotifyEvent:FireClient(self.Player, "You have unlocked all targets!", .8, Color3.fromRGB(255, 0, 0))
+
+        return
+    end
+    local TargetToPurchase = Settings["TARGET_ORDER"][table.find(Settings["TARGET_ORDER"], CurrentTarget)+1]
+
+    -- 2) Check if the player has enough cash to purchase the new target
+    if PlayerData["leaderstats"]["Credits"] < Settings["TARGET_DATA"][TargetToPurchase]["Price"] then
+        NotifyEvent:FireClient(self.Player, "Not enough credits!", .8, Color3.fromRGB(255, 0, 0))
+
+        return
+    end
+
+    -- 3) Update player's stats
+    PlayerData["leaderstats"]["Credits"] -= Settings["TARGET_DATA"][TargetToPurchase]["Price"]
+    PlayerData.Inventory.TargetInventory[TargetToPurchase] = true
+    Data.Set(self.Player, PlayerData)
+
+    -- 4) Set & display new targets
+    self:SetTarget(TargetToPurchase)
+    local NextTarget = Settings["TARGET_ORDER"][table.find(Settings["TARGET_ORDER"], TargetToPurchase)+1]
+    if NextTarget then
+        self:DisplayTarget(NextTarget)
+    else
+        self:Display(nil, true)
+    end
 end
 
 function PlotManager:Populate(PlayerData: table)
@@ -257,6 +302,27 @@ function PlotManager:Populate(PlayerData: table)
 
         task.wait(1)  -- Cooldown
         Debounce = false
+    end)
+
+    -- 6) Check for upgrading target
+    local Debounce2 = false
+    self.Plot.UpgradeTarget.Touched:Connect(function(hit)
+        local Humanoid = hit.Parent:FindFirstChild("Humanoid")
+        if not Humanoid then return end
+
+        local HitPlayer = Players:GetPlayerFromCharacter(hit.Parent)
+
+        -- If the hit player is different than this plot's player, we skip
+        if HitPlayer ~= self.Player then return end
+
+        -- If there's debounce, we skip
+        if Debounce2 then return end
+
+        Debounce2 = true
+        self:UpgradeTarget()
+
+        task.wait(5)  -- Cooldown
+        Debounce2 = false
     end)
 end
 

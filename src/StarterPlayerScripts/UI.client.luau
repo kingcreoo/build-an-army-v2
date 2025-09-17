@@ -42,6 +42,7 @@ local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
 local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
 local NotifyBindable: BindableEvent = Remotes:WaitForChild("NotifyBindable")
+local NotifyEvent: RemoteEvent = Remotes:WaitForChild("Notify")
 
 local SoldierShopPrompt: ProximityPrompt = Workspace:WaitForChild("SoldierShop"):WaitForChild("PromptPart"):WaitForChild("Prompt")
 
@@ -241,6 +242,7 @@ SoldierShopPrompt.PromptHidden:Connect(function()
 end)
 
 NotifyBindable.Event:Connect(Notify)
+NotifyEvent.OnClientEvent:Connect(Notify)
 
 -- TODO Wait for loading screen to finish
 HUD.Enabled = true
