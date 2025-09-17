@@ -467,6 +467,11 @@ function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetTy
 
     -- 3) Set new targets
     TargetTypes[Player.Name] = TargetType
+    repeat
+        task.wait() 
+    until
+        #Plot:WaitForChild("TargetSlots"):GetChildren() == 7
+
     for _, Slot in pairs(Plot:WaitForChild("TargetSlots"):GetChildren()) do
         local TargetModel = TargetModelType:Clone()
         local SlotName = Slot.Name
