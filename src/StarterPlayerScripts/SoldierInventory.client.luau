@@ -82,7 +82,7 @@ local function CreateFrame(SoldierID, SoldierData, PlayerData)
     if Index then
         SoldierFrame.LayoutOrder = Index
         SoldierFrame:WaitForChild("Active").Visible = true
-        SoldierFrame:WaitForChild("Active").TextLabel.Text = "ACTIVE" .. tostring(Index)
+        SoldierFrame:WaitForChild("Active").TextLabel.Text = "Active"
     else
         SoldierFrame.LayoutOrder = 100 + (SHOP_ORDER_REVERSED[SoldierData["Type"]] or 999)
         SoldierFrame:WaitForChild("Active").Visible = false
@@ -132,7 +132,7 @@ local function UpdateInventory(PlayerData: table)
         if Index then
             SoldierFrame.LayoutOrder = Index
             SoldierFrame:WaitForChild("Active").Visible = true
-            SoldierFrame:WaitForChild("Active").TextLabel.Text = "ACTIVE" .. tostring(Index)
+            SoldierFrame:WaitForChild("Active").TextLabel.Text = "Active"
         else
             local SoldierData = PlayerData["Inventory"]["SoldierInventory"][SoldierID]
             SoldierFrame.LayoutOrder = 100 + (SHOP_ORDER_REVERSED[SoldierData["Type"]] or 999)

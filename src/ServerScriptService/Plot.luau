@@ -12,11 +12,13 @@ local Players = game:GetService("Players")
 
 -- // Modules
 local Data = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Data"))
+local Settings = require(ReplicatedStorage:WaitForChild("Settings"))
 local RewardLoop = require(ServerScriptService:WaitForChild("Server"):WaitForChild("RewardLoop"))
 
 -- // Variables
 local PlotTemplate = ReplicatedStorage:WaitForChild("PlotTemplate")
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local TargetModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Targets")
 
 local SetSoldierEvent: RemoteEvent = Remotes:WaitForChild("SetSoldier")
 local SetTargetEvent: RemoteEvent = Remotes:WaitForChild("SetTarget")
@@ -193,6 +195,27 @@ function PlotManager:SetTarget(TargetType: string)
     SetTargetBindable:Fire(self.Player.Name, UnlockedLanes, TargetType)
 end
 
+function PlotManager:DisplayTarget(TargetType: string)
+    -- 1) Define variables
+    local Plot = self.Plot
+    local TargetModel: Model = TargetModels:WaitForChild(TargetType):Clone()
+    local TargetModelSize = TargetModel:GetExtentsSize()
+
+    -- 2) Remove existing target
+    local ExistingUpgradeModel: Model = Plot.Build.UpgradeModel:FindFirstChild("TargetModel")
+    if ExistingUpgradeModel then
+        ExistingUpgradeModel:Destroy()
+    end
+
+    -- 3) Display new target
+    TargetModel:SetPrimaryPartCFrame((Plot.Build.UpgradeModel.Base.CFrame + Vector3.new(0, (TargetModelSize.Y / 2) - 1.4, 0)) * CFrame.Angles(0, math.rad(180), 0))
+    TargetModel.Name = "TargetModel"
+    TargetModel.Parent = Plot.Build.UpgradeModel
+
+    -- 4) Update price
+    Plot:WaitForChild("UpgradeTarget").AmountGui.Amount.Text = "$" .. Settings["TARGET_DATA"][TargetType]["Price"]
+end
+
 function PlotManager:Populate(PlayerData: table)
     -- 1) Create the plot from a template
     self.Plot = PlotTemplate:Clone()
@@ -205,10 +228,14 @@ function PlotManager:Populate(PlayerData: table)
         end
     end
 
-    -- 3) Set the active target
+    -- 3) Set the active target, and display next target to unlock
     local ActiveTarget = PlayerData["Inventory"]["ActiveTarget"]
     if ActiveTarget ~= "" then
         self:SetTarget(PlayerData["Inventory"]["ActiveTarget"])
+        local NextTargetIndex = table.find(Settings["TARGET_ORDER"], ActiveTarget)+1
+        self:DisplayTarget(Settings["TARGET_ORDER"][NextTargetIndex])
+    else
+        self:DisplayTarget(Settings["TARGET_ORDER"][1])
     end
 
     -- 5) Check for claiming

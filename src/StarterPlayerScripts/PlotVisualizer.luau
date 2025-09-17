@@ -467,8 +467,10 @@ function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetTy
 
     -- 3) Set new targets
     TargetTypes[Player.Name] = TargetType
-    for _, SlotName in pairs(UnlockedLanes) do
+    for _, Slot in pairs(Plot:WaitForChild("TargetSlots"):GetChildren()) do
         local TargetModel = TargetModelType:Clone()
+        local SlotName = Slot.Name
+
         TargetModel:SetPrimaryPartCFrame(Plot:WaitForChild("TargetSlots"):WaitForChild(SlotName).CFrame * CFrame.Angles(0, math.rad(90), 0) + Vector3.new(0, 2.5, 0))
         TargetModel.Name = "Target" .. string.sub(SlotName, 5)
         TargetModel.Parent = Plot:WaitForChild("Targets")

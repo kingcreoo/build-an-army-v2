@@ -11,10 +11,10 @@ SETTINGS.DEFAULT_DATA = {
         ["Unlocks"] = {
             ["Slot1"] = true,
             ["Slot2"] = true,
-            ["Slot3"] = false,
-            ["Slot4"] = false,
-            ["Slot5"] = false,
-            ["Slot6"] = false,
+            ["Slot3"] = true,
+            ["Slot4"] = true,
+            ["Slot5"] = true,
+            ["Slot6"] = true,
             ["Slot7"] = false
         }
     },
@@ -70,21 +70,26 @@ SETTINGS.WEAPON_DATA = {
     }
 }
 
+SETTINGS.TARGET_ORDER = {"Target1", "Target2", "Target3"}
+
 SETTINGS.TARGET_DATA = {
     ["Target1"] = {
         ["TotalHealth"] = 3,
         ["TotalRespawnTime"] = 2,
-        ["Reward"] = 3
+        ["Reward"] = 3,
+        ["Price"] = 0
     },
     ["Target2"] = {
         ["TotalHealth"] = 5,
         ["TotalRespawnTime"] = 1.8,
-        ["Reward"] = 10
+        ["Reward"] = 10,
+        ["Price"] = 150
     },
     ["Target3"] = {
         ["TotalHealth"] = 10,
         ["TotalRespawnTime"] = 1.7,
-        ["Reward"] = 25
+        ["Reward"] = 25,
+        ["Price"] = 500
     }
 }
 
