@@ -13,6 +13,7 @@ local Data = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Da
 local Plot = require(ServerScriptService:WaitForChild("Server"):WaitForChild("Plot"))
 local SETTINGS = require(ReplicatedStorage:WaitForChild("Settings"))
 local RewardLoop = require(ServerScriptService:WaitForChild("Server"):WaitForChild("RewardLoop"))
+local IdleRewards = require(ServerScriptService:WaitForChild("Server"):WaitForChild("IdleRewards"))
 
 -- // Variables
 local Anchors = Workspace:WaitForChild("Anchors")
@@ -146,13 +147,20 @@ local function OnPlayerAdded(Player: Player)
     local PlayerData, NewPlayer = Data.Initialize(Player)
     print(Player.Name .. " has joined. Their data:")
     print(PlayerData)
+
     -- 1a) Tutorial for new players
     if NewPlayer then
         -- For now, skip lol
         print(Player.Name .. " is a new player. Skipping tutorial.")
     end
+
     -- 1b) Init player in the rewardloop
     RewardLoop.SetupPlayer(Player, PlayerData)
+
+    -- 1c) Load player's idle rewards
+    if PlayerData["LogOff"] then
+        IdleRewards.OnPlayerAdded(Player, PlayerData)
+    end
 
     -- 2) Create player's plot
     local PlayerPlot = Plot.new(Player, PlayerData, AssignPlotAnchor())
@@ -170,6 +178,9 @@ local function OnPlayerAdded(Player: Player)
 end
 
 local function OnPlayerRemoving(Player: Player)
+    -- 0) Claim idle rewards if player never did
+    IdleRewards.ClaimRewards(Player)
+
     -- 1) Remove player's data (save & write logoff details too)
     Data.Remove(Player)
 

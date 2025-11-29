@@ -109,6 +109,9 @@ function IdleRewards.OnPlayerAdded(Player: Player, PlayerData: table)
 
     -- 4) Store player's rewards in the rewards table
     Rewards[Player.Name] = PlayerRewards
+
+    -- 5) Fire client to show rewards GUI frame
+    IdleRewardsEvent:FireClient(Player, PlayerRewards)
 end
 
 function IdleRewards.ClaimRewards(Player: Player)
