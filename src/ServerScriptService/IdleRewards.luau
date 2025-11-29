@@ -88,23 +88,38 @@ function IdleRewards.OnPlayerAdded(Player: Player, PlayerData: table)
     local CurrentTime = os.time()
     local RawTimeAway = CurrentTime - LogOffTime
 
+    -- If player was away for less than a minute we do not calculate rewards
+    if RawTimeAway < 60 then return end
+
     -- 2a) Clamp player's away time to VIP or non-VIP maximum
     local HasVIP = false -- TODO check VIP
     local MaxTime
     if HasVIP then
-        MaxTime = 259000
+        MaxTime = 259200
     else
         MaxTime = 172800
     end
     local ClampedTimeAway = math.min(RawTimeAway, MaxTime)
 
-    -- 3) Calculate total possible rewards
-    local TotalPossibleRewards = CalculateRewards(PlayerData, RawTimeAway)
+    -- 3) Calculate rewards
+    local PlayerRewards = CalculateRewards(PlayerData, ClampedTimeAway)
+    if not HasVIP then
+        PlayerRewards = math.floor(PlayerRewards / 2)
+    end
 
+    -- 4) Store player's rewards in the rewards table
+    Rewards[Player.Name] = PlayerRewards
 end
 
 function IdleRewards.ClaimRewards(Player: Player)
+    if not Rewards[Player.Name] then return end
 
+    local PlayerData = Data.Get(Player)
+
+    PlayerData["leaderstats"]["Credits"] += Rewards[Player.Name]
+    Rewards[Player.Name] = nil
+
+    Data.Set(Player, PlayerData)
 end
 
 -- // Events
