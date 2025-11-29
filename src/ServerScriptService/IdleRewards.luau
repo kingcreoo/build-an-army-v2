@@ -72,6 +72,34 @@ end
 
 -- Calculates if player is valid for rewards & assigns rewards to valid players
 function IdleRewards.OnPlayerAdded(Player: Player, PlayerData: table)
+    -- 1) PRE CHECKS
+
+    -- 1a)
+    if not PlayerData["LogOff"] then return end
+
+    -- 1b)
+    if #PlayerData["Inventory"]["ActiveSoldiers"] <= 0 then return end
+
+    -- 1c)
+    if PlayerData["Inventory"]["ActiveTarget"] == nil then return end
+
+    -- 2) Get player's timings
+    local LogOffTime = PlayerData["LogOff"]
+    local CurrentTime = os.time()
+    local RawTimeAway = CurrentTime - LogOffTime
+
+    -- 2a) Clamp player's away time to VIP or non-VIP maximum
+    local HasVIP = false -- TODO check VIP
+    local MaxTime
+    if HasVIP then
+        MaxTime = 259000
+    else
+        MaxTime = 172800
+    end
+    local ClampedTimeAway = math.min(RawTimeAway, MaxTime)
+
+    -- 3) Calculate total possible rewards
+    local TotalPossibleRewards = CalculateRewards(PlayerData, RawTimeAway)
 
 end
 
