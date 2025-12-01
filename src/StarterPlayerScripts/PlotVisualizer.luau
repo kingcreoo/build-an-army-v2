@@ -36,6 +36,44 @@ local FireSoldierEvent: RemoteEvent = Remotes:WaitForChild("FireSoldier")
 
 -- // Functions
 
+local function AddStatusBar(SoldierModel: Model, SoldierData: table)
+    -- 1) After soldier model is created and positioned, clone and parent the statusbar
+    local StatusBar = ReplicatedStorage:WaitForChild("StatusBar"):Clone()
+    StatusBar.Parent = SoldierModel:WaitForChild("Head")
+
+    -- 2) Set the color of the status bar based on soldier type
+    local SoldierColor = SETTINGS.SOLDIER_DATA[SoldierData.Type]["Color"]
+    StatusBar.Color.BackgroundColor3 = SoldierColor
+end
+
+local function ResetStatusBar(SoldierModel: Model, SoldierData: table)
+    -- 1) Define variables
+    local StatusBar = SoldierModel:FindFirstChild("Head"):FindFirstChild("StatusBar")
+    if not StatusBar then return end
+
+    local FireRate = SETTINGS.SOLDIER_DATA[SoldierData["Type"]]["FireRate"]
+    if not FireRate then return end
+
+    local ColorFrame: Frame = StatusBar:FindFirstChild("Color")
+    if not ColorFrame then return end
+
+	-- 2) Calculate starting position after quick reset
+	local QuickResetDuration = 0.2
+	local FillSpeed = 1 / FireRate
+	local DistanceCovered = FillSpeed * QuickResetDuration
+	local StartPosition = 0 + DistanceCovered
+
+	-- 3) Quick tween from 1 to StartPosition
+	local QuickResetTween = TweenService:Create(ColorFrame, TweenInfo.new(QuickResetDuration, Enum.EasingStyle.Quad), {Size = UDim2.fromScale(StartPosition, 1)})
+	QuickResetTween:Play()
+
+	-- 4) After quick reset completes, start main fill tween
+	QuickResetTween.Completed:Connect(function()
+		local ResetTween = TweenService:Create(ColorFrame, TweenInfo.new(FireRate, Enum.EasingStyle.Quad), {Size = UDim2.fromScale(1, 1)})
+		ResetTween:Play()
+	end)
+end
+
 local function EquipWeapon(SoldierModel: Model, WeaponType: string)
     -- 1) Clone and parent weapon
     local Weapon = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Weapons"):WaitForChild(WeaponType):Clone()
@@ -211,6 +249,13 @@ local function AnimateSoldiers(SoldiersToAnimate: table)
     for _, InfoTable in pairs(SoldiersToAnimate) do
         -- 1) Animate soldier
         -- TODO soldier fire animations
+
+        -- 2) Reset status bar
+        local Plot = Workspace:WaitForChild("Plots"):WaitForChild(InfoTable.PlayerName)
+        local SoldierModel = Plot.Soldiers:FindFirstChild(InfoTable.SoldierID)
+        if SoldierModel then
+            ResetStatusBar(SoldierModel, InfoTable.SoldierData)
+        end
 
         -- 2) Create, Calculate, and Animate bullet
         local TimeToHit = AnimateBullet(InfoTable.PlayerName, InfoTable.SoldierID, InfoTable.SoldierData, InfoTable.SoldierData.Slot)
@@ -441,6 +486,9 @@ function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID
         local RegenerationTween = TweenService:Create(Part, TweenInfo.new(2), {["Transparency"] = 0})
         RegenerationTween:Play()
     end
+
+    -- 5) Add status bar
+    AddStatusBar(SoldierModel, SoldierData)
 
     -- OLD) Set new soldier after animations
     --task.delay(2, function()
