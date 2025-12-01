@@ -23,6 +23,12 @@ local SoldierShopFrame: Frame = FramesGui:WaitForChild("SoldierShop")
 local SoldierInventoryFrame: Frame = FramesGui:WaitForChild("SoldierInventory")
 local SettingsFrame: Frame = FramesGui:WaitForChild("SettingsFrame")
 
+local IdleRewardsFrame: Frame = FramesGui:WaitForChild("IdleRewardsFrame")
+local IdleRewardsAmount: TextLabel = IdleRewardsFrame:WaitForChild("MainFrame"):WaitForChild("Amount")
+local IdleRewardsHours: TextLabel = IdleRewardsFrame:WaitForChild("MainFrame"):WaitForChild("Hours")
+local IdleRewardsPercent: TextLabel = IdleRewardsFrame:WaitForChild("MainFrame"):WaitForChild("Percent")
+local IdleRewardsClaimButton: TextButton = IdleRewardsFrame:WaitForChild("MainFrame"):WaitForChild("Claim")
+
 local NotificationFrame: Frame = FramesGui:WaitForChild("NotificationFrame")
 local TemplateNotification: TextLabel = NotificationFrame:WaitForChild("TemplateNotification")
 
@@ -42,6 +48,7 @@ local ButtonExpandBindable: BindableEvent = Remotes:WaitForChild("ButtonExpand")
 local ButtonDeflateBindable: BindableEvent = Remotes:WaitForChild("ButtonDeflate")
 local CloseFrameBindable: BindableEvent = Remotes:WaitForChild("CloseFrame")
 local NotifyBindable: BindableEvent = Remotes:WaitForChild("NotifyBindable")
+local IdleRewardsEvent: RemoteEvent = Remotes:WaitForChild("IdleRewards")
 
 local SoldierShopPrompt: ProximityPrompt = Workspace:WaitForChild("SoldierShop"):WaitForChild("PromptPart"):WaitForChild("Prompt")
 
@@ -175,6 +182,45 @@ local function Notify(Message: string, Time: number, Color: Color3Value)
     end)
 end
 
+local function FormatHoursFromSeconds(Seconds: number)
+    local Hours = Seconds / 3600
+
+    if Hours >= 1 then
+        return tostring(math.floor(Hours))
+    else
+        return string.format("%.1", Hours)
+    end
+end
+
+local function ShowIdleRewards(Amount: number, HasVIP: boolean, ClampedTimeAway: number)
+    -- 1) Set the amount text
+    IdleRewardsAmount.Text = "$" .. Amount
+
+    -- 2) Set the hours text
+    -- Default text is "In x hour (48 hours max)"
+    local HoursAway = FormatHoursFromSeconds(ClampedTimeAway)
+    if HasVIP then
+        IdleRewardsHours.Text = "In " .. HoursAway .. " hours (72 hours max)"
+    else
+        IdleRewardsHours.Text = "In " .. HoursAway .. " hours (48 hours max)"
+    end
+
+    -- 3) Set the percent text
+    -- Default text is "At 50% rate" (100% for VIP)
+    if HasVIP then
+        IdleRewardsPercent.Text = "At 100% rate"
+    else
+        IdleRewardsPercent.Text = "At 50% rate"
+    end
+
+    -- 4) Show VIP advertisement if player isn't VIP
+    -- TODO
+
+    -- 5) Open the frame as priority
+    ActiveFramePriority = true
+    OpenFrame(IdleRewardsFrame)
+end
+
 -- // Events
 for _, Button in pairs(HUDButtons) do
     Button.MouseEnter:Connect(function()
@@ -241,6 +287,16 @@ SoldierShopPrompt.PromptHidden:Connect(function()
 end)
 
 NotifyBindable.Event:Connect(Notify)
+
+IdleRewardsEvent.OnClientEvent:Connect(ShowIdleRewards)
+IdleRewardsClaimButton.MouseButton1Click:Connect(function()
+    -- Fire server to claim
+    IdleRewardsEvent:FireServer()
+
+    -- Close the frame
+    ActiveFramePriority = false
+    CloseFrame(IdleRewardsFrame)
+end)
 
 -- TODO Wait for loading screen to finish
 HUD.Enabled = true

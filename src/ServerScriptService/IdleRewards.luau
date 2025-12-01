@@ -111,7 +111,7 @@ function IdleRewards.OnPlayerAdded(Player: Player, PlayerData: table)
     Rewards[Player.Name] = PlayerRewards
 
     -- 5) Fire client to show rewards GUI frame
-    IdleRewardsEvent:FireClient(Player, PlayerRewards)
+    IdleRewardsEvent:FireClient(Player, PlayerRewards, HasVIP, ClampedTimeAway)
 end
 
 function IdleRewards.ClaimRewards(Player: Player)
