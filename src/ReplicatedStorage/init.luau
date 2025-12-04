@@ -73,8 +73,15 @@ SETTINGS.RATING_ORDER = {"The Heavy", "The Shotgunner", "The Grunt"}
 SETTINGS.WEAPON_DATA = {
     ["M4"] = {
         ["C0"] = CFrame.new(-0.697, -2.093, 0.167) * CFrame.Angles(math.rad(-90), 0, 0),
-        ["C1"] = CFrame.new(0, -0.062, -0.489),
-        ["FireOffset"] = Vector3.new(4.5, 1.6, 0.4)
+        ["C1"] = CFrame.new(0, -0.062, -0.489)
+    },
+    ["LMG"] = {
+        ["C0"] = CFrame.new(-6.139, -1.442, -5.008) * CFrame.Angles(0, math.rad(-90), 0),
+        ["C1"] = CFrame.new(0, 0, 0)
+    },
+    ["Pump"] = {
+        ["C0"] = CFrame.new(1.163, -2.376, -4.896) * CFrame.Angles(0, math.rad(-90), 0),
+        ["C1"] = CFrame.new(0, 0, 0)
     }
 }
 
