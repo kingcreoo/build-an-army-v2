@@ -84,6 +84,48 @@ local function ResetStatusBar(SoldierModel: Model, SoldierData: table)
 	end)
 end
 
+local function RegenerateHealthBar(TargetModel: Model, TargetType: string)
+    -- 1) Get health bar and necessary data
+    local HealthBar = TargetModel:FindFirstChild("BarParent"):FindFirstChild("HealthBar")
+    if not HealthBar then return end
+
+    local ColorFrame: Frame = HealthBar:FindFirstChild("Color")
+    if not ColorFrame then return end
+
+    local RespawnTime = SETTINGS.TARGET_DATA[TargetType]["TotalRespawnTime"]
+
+    -- 2) Reset bar to 0 just in case
+    ColorFrame.Size = UDim2.fromScale(0, 1)
+
+    -- 3) Tween from 0 to 1 over the respawn duration
+    local RegenerationTween = TweenService:Create(ColorFrame, TweenInfo.new(RespawnTime - 0.15, Enum.EasingStyle.Quad), {Size = UDim2.fromScale(1, 1)})
+    RegenerationTween:Play()
+end
+
+local function DamageHealthBar(TargetModel: Model, TargetType: string, CurrentHealth: number, Death: boolean)
+    -- 1) Get health bar and necessary data
+    local HealthBar = TargetModel:FindFirstChild("BarParent"):FindFirstChild("HealthBar")
+    if not HealthBar then return end
+
+    local ColorFrame: Frame = HealthBar:FindFirstChild("Color")
+    if not ColorFrame then return end
+
+    local MaxHealth = SETTINGS.TARGET_DATA[TargetType]["TotalHealth"]
+
+    -- 2) Calculate new health percentage
+    local HealthPercentage = CurrentHealth / MaxHealth
+
+    -- 3) Tween bar down to new health percentage
+    local DamageTween = TweenService:Create(ColorFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {Size = UDim2.fromScale(HealthPercentage, 1)})
+    DamageTween:Play()
+
+    DamageTween.Completed:Connect(function()
+        if Death then
+            RegenerateHealthBar(TargetModel, TargetType)
+        end
+    end)
+end
+
 local function EquipWeapon(SoldierModel: Model, WeaponType: string)
     -- 1) Clone and parent weapon
     local Weapon = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Weapons"):WaitForChild(WeaponType):Clone()
