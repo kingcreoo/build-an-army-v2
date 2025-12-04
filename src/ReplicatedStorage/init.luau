@@ -26,7 +26,7 @@ SETTINGS.DEFAULT_DATA = {
     },
     ["Settings"] = {
         ["AutoEquip"] = false,
-        ["PotatoMode"] = true
+        ["PotatoMode"] = false
     }
 }
 

@@ -54,8 +54,6 @@ local function Restock()
 end
 
 local function AutoEquip(Player: Player)
-    print('auto equip called')
-
     -- 1) Get fresh player data
     local PlayerData = Data.Get(Player)
 

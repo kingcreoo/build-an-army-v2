@@ -22,6 +22,8 @@ local Targets = {[Players.LocalPlayer.Name] = {}}
 local DueDeaths = {[Players.LocalPlayer.Name] = {}}
 local TargetTypes = {}
 
+local PotatoModeEnabled = false
+
 local SoldierTimers = {}
 
 local SoldierModels = ReplicatedStorage:WaitForChild("Types"):WaitForChild("Soldiers")
@@ -33,6 +35,7 @@ local LocalPlayer = Players.LocalPlayer
 
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local FireSoldierEvent: RemoteEvent = Remotes:WaitForChild("FireSoldier")
+local UpdateSettingBindable: BindableEvent = Remotes:WaitForChild("UpdateSettingBindable")
 
 -- // Functions
 
@@ -339,6 +342,9 @@ local function AnimateSoldiers(SoldiersToAnimate: table)
 end
 
 RunService.Heartbeat:Connect(function()
+    -- Do not animate any soldiers if player has potato mode enabled
+    if PotatoModeEnabled then return end
+
     -- Early exit if no soldiers exist
     local HasSoldiers = false
     for _, PlayerSoldiers in pairs(Soldiers) do
@@ -355,6 +361,7 @@ RunService.Heartbeat:Connect(function()
     for PlayerName, PlayerSoldiers in pairs(Soldiers) do
         -- Do not animate local soldiers
         if PlayerName == LocalPlayer.Name then continue end
+
         for SoldierID, SoldierData in pairs(PlayerSoldiers) do
             -- 0) Preliminary checking
             if not Workspace.Plots[PlayerName].Soldiers:FindFirstChild(SoldierID) then
@@ -506,6 +513,14 @@ function PlotVisualizer.ClearSoldier(Player: Player, Slot: string)
 end
 
 function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID: string, SoldierData: table)
+    -- Initialize tables if player not yet registered
+    if not Lanes[Player.Name] then
+        Lanes[Player.Name] = {}
+        Soldiers[Player.Name] = {}
+        Targets[Player.Name] = {}
+        DueDeaths[Player.Name] = {}
+    end
+
     -- 1) Define variables
     local Plot = Workspace:WaitForChild("Plots"):WaitForChild(Player.Name)
     local SoldierModel = SoldierModels:WaitForChild(SoldierData["Model"]):Clone()
@@ -563,6 +578,14 @@ function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID
 end
 
 function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetType: string)
+    -- Initialize tables if player not yet registered
+    if not Lanes[Player.Name] then
+        Lanes[Player.Name] = {}
+        Soldiers[Player.Name] = {}
+        Targets[Player.Name] = {}
+        DueDeaths[Player.Name] = {}
+    end
+
     -- 1) Define variables
     local Plot = Workspace:WaitForChild("Plots"):WaitForChild(Player.Name)
     local TargetModelType = TargetModels:WaitForChild(TargetType)
@@ -611,6 +634,12 @@ FireSoldierEvent.OnClientEvent:Connect(function(InfoTable: table)
           SoldierID = InfoTable.SoldierID,
           SoldierData = InfoTable.SoldierData,
       }})
+end)
+
+UpdateSettingBindable.Event:Connect(function(Item, On)
+    if Item == "PotatoMode" then
+        PotatoModeEnabled = On
+    end
 end)
 
 -- // Return
