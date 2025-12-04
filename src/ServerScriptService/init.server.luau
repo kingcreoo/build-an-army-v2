@@ -53,6 +53,61 @@ local function Restock()
     return Stocks
 end
 
+local function AutoEquip(Player: Player)
+    print('auto equip called')
+
+    -- 1) Get fresh player data
+    local PlayerData = Data.Get(Player)
+
+    -- 2) Check if AutoEquip is enabled
+    if not PlayerData["Settings"]["AutoEquip"] then
+        return false
+    end
+
+    -- 3) Get number of unlocked slots
+    local UnlockedSlots = {}
+    for i = 1, 7 do
+        if PlayerData.Plot.Unlocks["Slot" .. tostring(i)] then
+            table.insert(UnlockedSlots, i)
+        end
+    end
+    local MaxSlots = #UnlockedSlots
+
+    -- 4) Get all owned soldiers
+    local OwnedSoldiers = {}
+    for SoldierID, SoldierData in pairs(PlayerData["Inventory"]["SoldierInventory"]) do
+        table.insert(OwnedSoldiers, {
+            ID = SoldierID,
+            Type = SoldierData.Type
+        })
+    end
+
+    -- 5) Sort soldiers by rating
+    table.sort(OwnedSoldiers, function(a, b)
+        local aIndex = table.find(SETTINGS.RATING_ORDER, a.Type)
+        local bIndex = table.find(SETTINGS.RATING_ORDER, b.Type)
+
+        return aIndex < bIndex
+    end)
+
+    -- 6) Deactive all current soldiers in reverse order
+    local PlotManager = PlayerPlotManagers[Player.Name]
+    local CurrentlyActive = PlayerData["Inventory"]["ActiveSoldiers"]
+
+    for i = #CurrentlyActive, 1, -1 do
+        local SoldierID = CurrentlyActive[i]
+        PlotManager:Deactivate(SoldierID)
+    end
+
+    -- 7) Active new best soldiers in rating order
+    local SlotsToFill = math.min(MaxSlots, #OwnedSoldiers)
+    for i = 1, SlotsToFill do
+        PlotManager:Activate(OwnedSoldiers[i].ID)
+    end
+
+    return true
+end
+
 local function CreateSoldier(Type: string)
     local SoldierID = HttpService:GenerateGUID()
     local SoldierData = {["Model"] = Type, ["Type"] = Type}
@@ -113,6 +168,9 @@ local function PurchaseSoldier(Player: Player, Type: string)
     local SoldierID, SoldierData = CreateSoldier(Type)
     PlayerData["Inventory"]["SoldierInventory"][SoldierID] = SoldierData
     Data.Set(Player, PlayerData)
+
+    -- Trigger AutoEquip if enabled
+    AutoEquip(Player)
 
     return "Purchased", PlayerData
 end
@@ -207,6 +265,12 @@ local function UpdateSetting(Player: Player, Item: string)
     else
         PlayerData["Settings"][Item] = true
         Data.Set(Player, PlayerData, true)
+
+        -- If AutoEquip was just enabled, run it immediately
+        if Item == "AutoEquip" then
+            AutoEquip(Player)
+        end
+
         return true, true
     end
 end

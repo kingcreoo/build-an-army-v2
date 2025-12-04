@@ -39,7 +39,8 @@ SETTINGS.SOLDIER_DATA = {
         ["RobuxPrice"] = 3,
         ["Rarity"] = 1,
         ["Image"] = "rbxassetid://73900105861068",
-        ["Color"] = Color3.fromRGB(72, 157, 236)
+        ["Color"] = Color3.fromRGB(72, 157, 236),
+        ["Weapon"] = "M4"
     },
     ["The Shotgunner"] = {
         ["FireRate"] = 4,
@@ -49,7 +50,8 @@ SETTINGS.SOLDIER_DATA = {
         ["RobuxPrice"] = 5,
         ["Rarity"] = 1,
         ["Image"] = "rbxassetid://73900105861068",
-        ["Color"] = Color3.fromRGB(72, 157, 236)
+        ["Color"] = Color3.fromRGB(72, 157, 236),
+        ["Weapon"] = "Pump"
     },
     ["The Heavy"] = {
         ["FireRate"] = 4,
@@ -59,11 +61,14 @@ SETTINGS.SOLDIER_DATA = {
         ["RobuxPrice"] = 10,
         ["Rarity"] = .9,
         ["Image"] = "rbxassetid://73900105861068",
-        ["Color"] = Color3.fromRGB(72, 157, 236)
+        ["Color"] = Color3.fromRGB(72, 157, 236),
+        ["Weapon"] = "LMG"
     }
 }
 
 SETTINGS.SHOP_ORDER = {"The Grunt", "The Shotgunner", "The Heavy"}
+
+SETTINGS.RATING_ORDER = {"The Heavy", "The Shotgunner", "The Grunt"}
 
 SETTINGS.WEAPON_DATA = {
     ["M4"] = {

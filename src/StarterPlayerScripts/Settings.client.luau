@@ -71,6 +71,7 @@ end
 local function LoadSettings(PlayerData)
     for Item, On in pairs(PlayerData["Settings"]) do
         UpdateItem(Item, On)
+        UpdateSettingBindable:Fire(Item, On)
     end
 end
 
@@ -96,6 +97,7 @@ local function ChangeSetting(Item: string)
     end
 
     UpdateItem(Item, On)
+    UpdateSettingBindable:Fire(Item, On)
 
     task.delay(1, function()
         Bounces -= 1

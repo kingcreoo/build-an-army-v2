@@ -537,7 +537,8 @@ function PlotVisualizer.SetSoldier(Player: Player, SlotNumber: string, SoldierID
     end
     SoldierModel:SetPrimaryPartCFrame(Plot:WaitForChild("SoldierSlots"):WaitForChild(SlotNumber).CFrame * CFrame.Angles(0, math.rad(-90), 0) + Vector3.new(0,2.5,0))
     SoldierModel.Parent = Plot:WaitForChild("Soldiers")
-    local _, WeaponParts = EquipWeapon(SoldierModel, "M4")
+    local WeaponType = SETTINGS.SOLDIER_DATA[SoldierData.Type]["Weapon"]
+    local _, WeaponParts = EquipWeapon(SoldierModel, WeaponType)
 
     for _, Part in pairs(WeaponParts) do
         Part.Transparency = 1
