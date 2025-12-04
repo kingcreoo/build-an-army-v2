@@ -46,6 +46,16 @@ local function AddStatusBar(SoldierModel: Model, SoldierData: table)
     StatusBar.Color.BackgroundColor3 = SoldierColor
 end
 
+local function AddHealthBar(TargetModel: Model, TargetType: string)
+    -- 1) After target model is created, add it's healthbar
+    local HealthBar = ReplicatedStorage:WaitForChild("HealthBar"):Clone()
+    HealthBar.Parent = TargetModel:WaitForChild("BarParent")
+
+    -- 2)
+    local TypeColor = SETTINGS.TARGET_DATA[TargetType]["Color"]
+    HealthBar.Color.BackgroundColor3 = TypeColor
+end
+
 local function ResetStatusBar(SoldierModel: Model, SoldierData: table)
     -- 1) Define variables
     local StatusBar = SoldierModel:FindFirstChild("Head"):FindFirstChild("StatusBar")
