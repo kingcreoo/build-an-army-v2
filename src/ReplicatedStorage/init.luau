@@ -77,17 +77,20 @@ SETTINGS.TARGET_DATA = {
     ["Target1"] = {
         ["TotalHealth"] = 3,
         ["TotalRespawnTime"] = 2,
-        ["Reward"] = 3
+        ["Reward"] = 3,
+        ["Color"] = Color3.fromRGB(255, 66, 66)
     },
     ["Target2"] = {
         ["TotalHealth"] = 5,
         ["TotalRespawnTime"] = 1.8,
-        ["Reward"] = 10
+        ["Reward"] = 10,
+        ["Color"] = Color3.fromRGB(255, 66, 66)
     },
     ["Target3"] = {
         ["TotalHealth"] = 10,
         ["TotalRespawnTime"] = 1.7,
-        ["Reward"] = 25
+        ["Reward"] = 25,
+        ["Color"] = Color3.fromRGB(255, 66, 66)
     }
 }
 
