@@ -263,7 +263,7 @@ local function DestroyTarget(InfoTable: table)
     local PartsToRegenerate = {}
     if TargetModel then
         for _, Inst in pairs(TargetModel:GetChildren()) do
-            if Inst.ClassName == "Part" and Inst.Name ~= "Anchor" and Inst.Name ~= "Target" then
+            if Inst.ClassName == "Part" and Inst.Name ~= "Anchor" and Inst.Name ~= "Target" and Inst.Name ~= "BarParent" then
                 Inst.Transparency = 1
                 table.insert(PartsToRegenerate, Inst)
             elseif Inst:IsA("Model") then
@@ -319,10 +319,20 @@ local function AnimateSoldiers(SoldiersToAnimate: table)
 
         Targets[InfoTable.PlayerName][InfoTable.SoldierData.Slot].Health = CurrentHealth - Damage
 
+        --Animate healthbar
+        local TargetSlot = string.sub(InfoTable.SoldierData.Slot, 5)
+        local TargetModel = Plot.Targets:FindFirstChild("Target" .. TargetSlot)
+        local TargetType = TargetTypes[InfoTable.PlayerName]
+
         if CurrentHealth - Damage <= 0 and Targets[InfoTable.PlayerName][InfoTable.SoldierData.Slot].State == "Alive" then
             DueDeaths[InfoTable.PlayerName][InfoTable.SoldierData.Slot] = true
             task.delay(TimeToHit, function()
                 DestroyTarget(InfoTable)
+                DamageHealthBar(TargetModel, TargetType, CurrentHealth - Damage, true)
+            end)
+        else
+            task.delay(TimeToHit, function()
+                DamageHealthBar(TargetModel, TargetType, CurrentHealth - Damage, false)
             end)
         end
     end
@@ -572,6 +582,7 @@ function PlotVisualizer.SetTarget(Player: Player, UnlockedLanes: table, TargetTy
         TargetModel:SetPrimaryPartCFrame(Plot:WaitForChild("TargetSlots"):WaitForChild(SlotName).CFrame * CFrame.Angles(0, math.rad(90), 0) + Vector3.new(0, 2.5, 0))
         TargetModel.Name = "Target" .. string.sub(SlotName, 5)
         TargetModel.Parent = Plot:WaitForChild("Targets")
+        AddHealthBar(TargetModel, TargetType)
 
         Targets[Player.Name][SlotName] = {["Health"] = SETTINGS["TARGET_DATA"][TargetType]["TotalHealth"], ["RespawnTime"] = SETTINGS["TARGET_DATA"][TargetType]["TotalRespawnTime"], ["State"] = "Alive"}
     end
