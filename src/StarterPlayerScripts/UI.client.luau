@@ -188,7 +188,7 @@ local function FormatHoursFromSeconds(Seconds: number)
     if Hours >= 1 then
         return tostring(math.floor(Hours))
     else
-        return string.format("%.1", Hours)
+        return string.format("%.1f", Hours)
     end
 end
 
